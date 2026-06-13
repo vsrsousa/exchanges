@@ -1,5 +1,5 @@
 module exchange_utils
-  use parameters, only: dp
+  use parameters, only: dp, pi
   use general, only: hdim, nspin, nkp, wk
   implicit none
 
