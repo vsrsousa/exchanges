@@ -91,6 +91,28 @@ contains
 
   end subroutine prepare_indices
 
+  subroutine init_exchange_buffers(nnnbrs, maxbd, occ, Jorb, Jexc, tmp1)
+    use parameters, only: dp
+    implicit none
+    integer, intent(in) :: nnnbrs, maxbd
+    real(dp), allocatable, intent(out) :: occ(:,:,:)
+    complex(dp), allocatable, intent(out) :: Jorb(:,:,:,:), Jexc(:,:)
+    complex(dp), allocatable, intent(out) :: tmp1(:,:)
+
+    allocate(occ(nnnbrs, nspin, maxbd))
+    occ = 0.0_dp
+
+    allocate(Jexc(nnnbrs, nnnbrs))
+    Jexc = cmplx(0.0,0.0,dp)
+
+    allocate(Jorb(nnnbrs, nnnbrs, maxbd, maxbd))
+    Jorb = cmplx(0.0,0.0,dp)
+
+    allocate(tmp1(maxbd, maxbd))
+    tmp1 = cmplx(0.0,0.0,dp)
+
+  end subroutine init_exchange_buffers
+
   subroutine inverse_complex_matrix(dim,a)
     use parameters, only : dp
     implicit none

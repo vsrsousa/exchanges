@@ -174,9 +174,7 @@ program exchange_parameters
   est_gb = real(est_bytes,dp) / 1024.0_dp / 1024.0_dp / 1024.0_dp
   call print_estimated_G(est_bytes)
 
-  ! allocate temporary storage for single-z Green function and occupations (streaming)
-  allocate(occ(nnnbrs,nspin,MAXVAL(block_dim)))
-  occ = 0.0_dp
+  ! allocate exchange/occupation buffers
   ! memory status after allocating per-z buffers omitted to match reference format
 
   ! Diagnostics removed for clean output (kept timestamps only)
@@ -191,12 +189,7 @@ program exchange_parameters
   end if
   ! end of debug
 
-  allocate(Jexc(nnnbrs,nnnbrs))
-  Jexc = cmplx(0.0,0.0,dp)
-  allocate( Jorb(nnnbrs,nnnbrs,MAXVAL(block_dim),MAXVAL(block_dim)))
-  Jorb = cmplx(0.0,0.0,dp)
-
-  allocate( tmp1(MAXVAL(block_dim),MAXVAL(block_dim)) )
+  call init_exchange_buffers(nnnbrs, MAXVAL(block_dim), occ, Jorb, Jexc, tmp1)
 
   ! prepare per-atom indices
   allocate(istart_idx(nnnbrs), idim_idx(nnnbrs), iend_idx(nnnbrs))
