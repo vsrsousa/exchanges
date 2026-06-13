@@ -98,6 +98,7 @@ program exchange_parameters
   
   call read_hamilt()
   call read_crystal()
+  ! read_hamilt moved to hamiltonian_mod
 
   ! report memory after reading input H and crystal
   call print_mem_status('After reading inputs')
@@ -504,21 +505,9 @@ subroutine read_hamilt()
 
 end subroutine read_hamilt
 
-subroutine clear()
+! read_hamilt moved to module hamiltonian_mod
+
 
   use general
 
-  if( allocated(tau) ) deallocate(tau)
-  if( allocated(atomlabel) ) deallocate(atomlabel)
-  if( allocated(h) ) deallocate(h)
-  if( allocated(wk) ) deallocate(wk)
-  if( allocated(xk) ) deallocate(xk)
-  if( allocated(block_atom) ) deallocate( block_atom )
-  if( allocated(block_l) ) deallocate( block_l )
-  if( allocated(block_dim) ) deallocate( block_dim )
-  if( allocated(block_orbitals) ) deallocate( block_orbitals )
-  if( allocated(block_start) ) deallocate(block_start)
 
-end subroutine clear
-
- 
