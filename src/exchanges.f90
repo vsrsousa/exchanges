@@ -220,16 +220,11 @@ program exchange_parameters
 
   DO ia = 1, nnnbrs
     DO ja = ia+1, nnnbrs
-        ! Compute distance between atoms for pretty output
-        pos_delta= SQRT((taunew(1,ia) - taunew(1,ja))**2+ &
-                        (taunew(2,ia) - taunew(2,ja))**2+ &
-                        (taunew(3,ia) - taunew(3,ja))**2 )
-        !
         ! delegate printing to io_mod
-        call print_exchange_pair(ia, ja, Jexc(ia,ja), Jorb(ia,ja,1:block_dim(parent(ia)),1:block_dim(parent(ia))), kb_ev, pos_delta)
-
     END DO
   END DO
+
+  call print_all_exchanges(nnnbrs, parent, block_dim, Jexc, Jorb, taunew)
 
   write(stdout,*)
   write(stdout,*) '    Computed orbitals occupations should coincide with your DFT results'

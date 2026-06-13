@@ -68,4 +68,25 @@ contains
     write(*,'(5x,A)') ''
   end subroutine print_program_header
 
+  subroutine print_all_exchanges(nnnbrs, parent, block_dim, Jexc, Jorb, taunew)
+    use parameters, only: dp, kb_ev
+    implicit none
+    integer, intent(in) :: nnnbrs
+    integer, intent(in) :: parent(:)
+    integer, intent(in) :: block_dim(:)
+    complex(dp), intent(in) :: Jexc(:,:)
+    complex(dp), intent(in) :: Jorb(:,:,:,:)
+    real(dp), intent(in) :: taunew(3,*)
+    integer :: ia, ja
+    real(dp) :: pos_delta
+
+    do ia = 1, nnnbrs
+      do ja = ia+1, nnnbrs
+        pos_delta = sqrt( (taunew(1,ia) - taunew(1,ja))**2 + (taunew(2,ia) - taunew(2,ja))**2 + (taunew(3,ia) - taunew(3,ja))**2 )
+        call print_exchange_pair(ia, ja, Jexc(ia,ja), Jorb(ia,ja,1:block_dim(parent(ia)),1:block_dim(parent(ia))), kb_ev, pos_delta)
+      end do
+    end do
+
+  end subroutine print_all_exchanges
+
 end module io_mod
