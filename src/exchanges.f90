@@ -14,6 +14,8 @@ program exchange_parameters
   character(len=3) :: fmt='   ' ! is used for pretty output only
   real(dp) :: pos_delta
   real(dp) :: est_gb, est_mb, rss_gb
+  real(dp) :: elapsed
+  character(len=20) :: exec_ts, exec_start_ts
   complex(dp), allocatable :: z(:), G(:,:,:,:,:,:), delta(:,:), tmp1(:,:), hksum(:,:,:)
   complex(dp) :: zstep, tmp2
   real(dp), allocatable :: Jexc(:,:), Jexc0(:), Jorb(:,:,:,:)
@@ -63,6 +65,9 @@ program exchange_parameters
   write(stdout,'(5x,a66,/)') '------------------------------------------------------------------'
 
   write(stdout,'(/,5x,a11,i3,a8,/)') 'Running in ', OMP_get_max_threads(), ' threads'
+  exec_start_ts = get_timestamp()
+  write(stdout,'(5x,A)') trim(exec_start_ts)//'  Start execution'
+  write(stdout,'(5x,A)') ''
 
   read(stdin, exchanges, iostat=ios)
   if( ios .ne. 0 ) stop "Can't read input"
@@ -75,9 +80,7 @@ program exchange_parameters
   call read_crystal()
 
   ! report memory after reading input H and crystal
-  call get_mem_kb(rss_kb, peak_kb)
-  rss_gb = real(rss_kb,dp) / (1024.0_dp*1024.0_dp)
-  write(stdout,'(/5x,a,1x,i12,a,2x,a,F8.3)') 'Memory after reading inputs (kB)=', rss_kb, '  VmPeak(kB)=', peak_kb, '(', rss_gb, 'GB)'
+  call print_mem_status('After reading inputs')
 
   if(atom_of_interest == -100) atom_of_interest = block_atom(1)
 
@@ -165,12 +168,10 @@ program exchange_parameters
   est_bytes = total_elems * bytes_per_complex
   est_mb = real(est_bytes,dp) / 1024.0_dp / 1024.0_dp
   est_gb = real(est_bytes,dp) / 1024.0_dp / 1024.0_dp / 1024.0_dp
-  write(stdout,'(/5x,a,I12,a,2x,a,F8.3,a,2x,a,F8.3)') 'Estimated memory for G (bytes)=', est_bytes, '(', est_mb, 'MB', ')', '(', est_gb, 'GB', ')'
+  call print_estimated_G(est_bytes)
 
   allocate(G(nz,nnnbrs,nnnbrs,MAXVAL(block_dim),MAXVAL(block_dim),nspin))
-  call get_mem_kb(rss_kb, peak_kb)
-  rss_gb = real(rss_kb,dp) / (1024.0_dp*1024.0_dp)
-  write(stdout,'(/5x,a,1x,i12,2x,a,F8.3)') 'Memory after allocating G (kB)=', rss_kb, ' (', rss_gb, 'GB)'
+  call print_mem_status('After allocating G')
 
   call compute_g(nz,nnnbrs,nblocks,MAXVAL(block_dim),G,H,z(1:nz),parent(1:nnnbrs), &
                         taunew(:,1:nnnbrs),block_start(1:nblocks),block_dim(1:nblocks))
@@ -283,7 +284,10 @@ program exchange_parameters
 
   call system_clock(time_end,count_rate)
 
-  write(stdout,'(/5x,a15,i5,a8)') 'Execution time:', (time_end - time_start)/count_rate, 'seconds'
+  elapsed = real(time_end - time_start, dp) / real(count_rate, dp)
+  exec_ts = get_timestamp()
+  write(stdout,'(5x,A)') ''
+  write(stdout,'(5x,A,F8.3,A)') trim(exec_ts)//'  Execution time: ', elapsed, ' seconds'
 
 end program exchange_parameters
 

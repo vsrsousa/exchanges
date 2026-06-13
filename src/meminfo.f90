@@ -28,4 +28,69 @@ contains
     close(99)
   end subroutine get_mem_kb
 
+  subroutine print_mem_status(stage)
+    implicit none
+    character(len=*), intent(in) :: stage
+    integer(kind=8) :: rss_kb, vmpeak_kb
+    real(8) :: rss_gb
+    character(len=64) :: s_rss_kb, s_vmpeak_kb, s_rss_gb, line
+      ! character(len=20) :: ts
+
+    rss_kb = -1_8
+    vmpeak_kb = -1_8
+
+    call get_mem_kb(rss_kb, vmpeak_kb)
+    rss_gb = 0.0_8
+    if (rss_kb .gt. 0_8) rss_gb = real(rss_kb,8) / (1024.0_8*1024.0_8)
+
+    write(s_rss_kb,'(I0)') rss_kb
+    write(s_vmpeak_kb,'(I0)') vmpeak_kb
+    write(s_rss_gb,'(F8.3)') rss_gb
+
+        write(line,'(A)') trim(adjustl(stage)) // ': RSS=' // trim(adjustl(s_rss_kb)) // &
+          ' kB  Peak=' // trim(adjustl(s_vmpeak_kb)) // &
+          ' kB  (' // trim(adjustl(s_rss_gb)) // ' GB)'
+    write(*,'(5x,A)') ''
+      write(*,'(5x,A)') trim(line)
+  end subroutine print_mem_status
+
+  subroutine print_estimated_G(est_bytes)
+    implicit none
+    integer(kind=8), intent(in) :: est_bytes
+    real(8) :: est_mb, est_gb
+    character(len=64) :: s_est_bytes, s_est_mb, s_est_gb, line
+    character(len=20) :: ts
+
+    est_mb = real(est_bytes,8) / 1024.0_8 / 1024.0_8
+    est_gb = est_mb / 1024.0_8
+
+    write(s_est_bytes,'(I0)') est_bytes
+    write(s_est_mb,'(F8.2)') est_mb
+    write(s_est_gb,'(F8.3)') est_gb
+
+        write(line,'(A)') 'Estimated memory for G: ' // trim(adjustl(s_est_bytes)) // &
+          ' bytes (' // trim(adjustl(s_est_mb)) // ' MB, ' // trim(adjustl(s_est_gb)) // ' GB)'
+    write(*,'(5x,A)') ''
+      write(*,'(5x,A)') trim(line)
+  end subroutine print_estimated_G
+
+  function get_timestamp() result(ts)
+    implicit none
+    character(len=20) :: ts
+    integer :: v(8)
+    character(len=4) :: y
+    character(len=2) :: mo, da, hh, mm, ss
+
+    call date_and_time(values=v)
+    write(y,'(I4.4)') v(1)
+    write(mo,'(I2.2)') v(2)
+    write(da,'(I2.2)') v(3)
+    write(hh,'(I2.2)') v(5)
+    write(mm,'(I2.2)') v(6)
+    write(ss,'(I2.2)') v(7)
+
+    ts = y//'-'//mo//'-'//da//' '//hh//':'//mm//':'//ss
+
+  end function get_timestamp
+
 end module meminfo
