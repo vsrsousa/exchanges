@@ -14,7 +14,7 @@ program exchange_parameters
   use diag_mod
   use streaming_mod
   use setup_mod
-  use input_mod
+  use input_mod, only: nz1, nz2, nz3, height, emin, emax, distance, iverbosity, mode, l, atom_of_interest, diag_iz_max, diag_verbose, read_input, get_out_unit
   use calc_mod
   use omp_lib
 
@@ -31,6 +31,7 @@ program exchange_parameters
   integer :: dbg_ia, dbg_ja
   integer(kind=8) :: rss_kb, peak_kb, total_elems, est_bytes
   integer, parameter :: bytes_per_complex = 16
+  character(len=3) :: in_out_unit
 
   ! Input parameters are below:
 
@@ -39,15 +40,23 @@ program exchange_parameters
 
   call system_clock(time_start,count_rate)
   call get_timestamp(exec_start_ts)
+  ! Redirect default Fortran output unit to file `exchanges.out`
+  open(unit=stdout, file='exchanges.out', status='replace', action='write', iostat=ios)
+  if (ios /= 0) then
+    write(*,*) 'Warning: could not open exchanges.out for writing, using stdout'
+  end if
+
+  call get_timestamp(exec_start_ts)
   call print_program_header(exec_start_ts, OMP_get_max_threads())
 
   call read_input()
+  call set_out_unit(get_out_unit())
 
   write(stdout,'(5x,a34)') 'Parameters of integration contour:'
   write(stdout,'(5x,a7,f7.3,a9,f6.3,a11,f5.3,a5)') 'emin = ', emin, '  emax = ', emax, '  height = ', height,' (eV)'
   write(stdout,'(5x,a6,i4,a8,i4,a8,i4)') 'nz1 = ', nz1, '  nz2 = ', nz2, '  nz3 = ', nz3
 
-  call setup_system(mode, distance, l, atom_of_interest)
+  call setup_system(mode, distance, l, atom_of_interest, distance_unit)
 
 
 

@@ -1,15 +1,15 @@
 ! Copyright (C) Dmitry Korotin dmitry@korotin.name
 
-subroutine find_nnbrs(natoms,tau,cell,aoi,maxdistance,nnnbrs,taunew,parent)
-    
-    use parameters, only : dp, maxnnbrs
+subroutine find_nnbrs(natoms, atoms, aoi, maxdistance, nnnbrs, taunew, parent)
+
+  use parameters, only : dp, maxnnbrs
+  use general, only : atom_t, cell_info
     implicit none
 
-    integer, intent(in) :: natoms, & ! Number of atoms in initial cell
-                                   aoi ! atom of interest. We will search neighbours of this atom
-    real(dp), intent(in) :: tau(3,natoms), & ! positions of atoms in the initial cell
-                                                    cell(3,3), & ! cell vectors row-wise (in units of alat)
-                                                    maxdistance ! max distance betwee aoi and neighbouring atom
+  integer, intent(in) :: natoms, & ! Number of atoms in initial cell
+                   aoi ! atom of interest. We will search neighbours of this atom
+  type(atom_t), intent(in) :: atoms(natoms)
+  real(dp), intent(in) :: maxdistance ! max distance betwee aoi and neighbouring atom
 
     real(dp), intent(out) :: taunew(3,maxnnbrs) ! nnbrhds positions
     integer, intent(out) :: nnnbrs, & ! total number of nearest neighbours
@@ -28,13 +28,13 @@ subroutine find_nnbrs(natoms,tau,cell,aoi,maxdistance,nnnbrs,taunew,parent)
     do j = -ntransl, ntransl
       do k = -ntransl, ntransl
         ! translation vector:
-        v = real(i,dp)*cell(:,1) + real(j,dp)*cell(:,2) + real(k,dp)*cell(:,3)
+        v = real(i,dp)*cell_info%vec(:,1) + real(j,dp)*cell_info%vec(:,2) + real(k,dp)*cell_info%vec(:,3)
 
         do iatom = 1, natoms
-          new_pos = tau(:,iatom) + v
-          distance = SQRT((new_pos(1)-tau(1,aoi))**2 + &
-                          (new_pos(2)-tau(2,aoi))**2 + &
-                          (new_pos(3)-tau(3,aoi))**2 )
+          new_pos = atoms(iatom)%pos + v
+          distance = SQRT((new_pos(1)-atoms(aoi)%pos(1))**2 + &
+                          (new_pos(2)-atoms(aoi)%pos(2))**2 + &
+                          (new_pos(3)-atoms(aoi)%pos(3))**2 )
           
           if( distance .le. maxdistance ) then
             call haa(taunew(:,:), new_pos, have_atom_already, dummy)

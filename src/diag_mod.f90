@@ -56,7 +56,7 @@ contains
 
   subroutine run_diag_iz(diag_iz_max, z, nz, nnnbrs, nblocks, gdim, H, parent, taunew, block_start, block_dim, delta)
     use parameters, only: dp, tpi
-    use general, only: nspin
+    use general, only: nspin, blocks
     use green_mod
     implicit none
     integer, intent(in) :: diag_iz_max, nz, nnnbrs, nblocks, gdim
@@ -89,11 +89,11 @@ contains
       sumJ_stream = 0.0_dp
 
       do ia2 = 1, nnnbrs
-        istart = block_start(parent(ia2))
-        idim = block_dim(parent(ia2))
+        istart = blocks(parent(ia2))%start
+        idim = blocks(parent(ia2))%dim
         do ja2 = ia2+1, nnnbrs
-          jstart = block_start(parent(ja2))
-          jdim = block_dim(parent(ja2))
+          jstart = blocks(parent(ja2))%start
+          jdim = blocks(parent(ja2))%dim
           if (idim .ne. jdim) cycle
           tmp_loc = cmplx(0.0,0.0,dp)
           tmp_loc(1:idim,1:idim) = MATMUL( MATMUL(delta(istart:istart+idim-1,istart:istart+idim-1), Gtest(1,ia2,ja2,1:idim,1:jdim,2)), &

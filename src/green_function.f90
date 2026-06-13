@@ -1,6 +1,6 @@
 module green_mod
   use parameters, only : dp, tpi
-  use general, only : hdim, nkp, nspin, xk, wk, tau, block_atom, efermi
+  use general, only : hdim, nkp, nspin, xk, wk, atoms, blocks, efermi
   implicit none
 contains
 
@@ -55,9 +55,9 @@ contains
               ! compute indices for debug element
               istart = block_start(parent(dbg_ia))-1
               jstart = block_start(parent(dbg_ja))-1
-              kphase = cdexp( 1.d0*DCMPLX(0.d0,1.d0)*tpi*&
+                kphase = cdexp( 1.d0*DCMPLX(0.d0,1.d0)*tpi*&
                   DOT_PRODUCT( xk(:,ik), &
-                    ((taunew(:,dbg_ia)-tau(:,block_atom(parent(dbg_ia))))-(taunew(:,dbg_ja)-tau(:,block_atom(parent(dbg_ja)))) ) ))
+                    ((taunew(:,dbg_ia)-atoms(blocks(parent(dbg_ia))%atom)%pos)-(taunew(:,dbg_ja)-atoms(blocks(parent(dbg_ja))%atom)%pos) ) ))
               write(*,'(a,i6,a,i6,a,i4,a,i4,a,i4)') 'DIAG_onez: ik=',ik,' ia=',dbg_ia,' ja=',dbg_ja,' i=',dbg_i,' j=',dbg_j,' spin=',ispin
               write(*,'(5x,a,2(1x,2(f12.6)))') ' DIAG_onez: Gloc_re,Gloc_im, kphase_re,kphase_im =', real(Gloc(istart+dbg_i,jstart+dbg_j)), aimag(Gloc(istart+dbg_i,jstart+dbg_j)), real(kphase), aimag(kphase)
               write(*,'(5x,a,1x,f12.6)') ' DIAG_onez: wk =', wk(ik)
@@ -70,15 +70,15 @@ contains
         DO ia = 1, natoms
           DO ja = 1, natoms
             ! exp(i*k*(Ri-Rj))
-            kphase = cdexp( 1.d0*DCMPLX(0.d0,1.d0)*tpi*&
-                DOT_PRODUCT( xk(:,ik), &
-                  ((taunew(:,ia)-tau(:,block_atom(parent(ia))))-(taunew(:,ja)-tau(:,block_atom(parent(ja)))) ) ))
+                  kphase = cdexp( 1.d0*DCMPLX(0.d0,1.d0)*tpi*&
+                  DOT_PRODUCT( xk(:,ik), &
+                    ((taunew(:,ia)-atoms(blocks(parent(ia))%atom)%pos)-(taunew(:,ja)-atoms(blocks(parent(ja))%atom)%pos) ) ))
 
-            istart = block_start(parent(ia))-1
-            jstart = block_start(parent(ja))-1
+            istart = blocks(parent(ia))%start - 1
+            jstart = blocks(parent(ja))%start - 1
 
-            DO i = 1, block_dim(parent(ia))
-              DO j = 1, block_dim(parent(ja))
+            DO i = 1, blocks(parent(ia))%dim
+              DO j = 1, blocks(parent(ja))%dim
                 Gz(ia,ja,i,j,ispin) = Gz(ia,ja,i,j,ispin) + wk(ik)*Gloc(istart+i,jstart+j)*kphase
               END DO
             END DO
@@ -125,11 +125,11 @@ contains
           if (present(debug_print) .and. debug_print) then
             if (present(dbg_ia) .and. present(dbg_ja) .and. present(dbg_i) .and. present(dbg_j) .and. present(dbg_ispin)) then
               if (dbg_ispin == ispin) then
-                istart = block_start(parent(dbg_ia))-1
-                jstart = block_start(parent(dbg_ja))-1
+                istart = blocks(parent(dbg_ia))%start-1
+                jstart = blocks(parent(dbg_ja))%start-1
                 kphase = cdexp( 1.d0*DCMPLX(0.d0,1.d0)*tpi*&
                     DOT_PRODUCT( xk(:,ik), &
-                      ((taunew(:,dbg_ia)-tau(:,block_atom(parent(dbg_ia))))-(taunew(:,dbg_ja)-tau(:,block_atom(parent(dbg_ja)))) ) ))
+                      ((taunew(:,dbg_ia)-atoms(blocks(parent(dbg_ia))%atom)%pos)-(taunew(:,dbg_ja)-atoms(blocks(parent(dbg_ja))%atom)%pos) ) ))
                 write(*,'(a,i6,a,i6,a,i4,a,i4,a,i4,a,i4)') 'DIAG_g: iz=',iz,' ik=',ik,' ia=',dbg_ia,' ja=',dbg_ja,' i=',dbg_i,' j=',dbg_j,' spin=',ispin
                 write(*,'(5x,a,2(1x,2(f12.6)))') ' DIAG_g: Gloc_re,Gloc_im, kphase_re,kphase_im =', real(Gloc(istart+dbg_i,jstart+dbg_j)), aimag(Gloc(istart+dbg_i,jstart+dbg_j)), real(kphase), aimag(kphase)
                 write(*,'(5x,a,1x,f12.6)') ' DIAG_g: wk =', wk(ik)
@@ -143,13 +143,13 @@ contains
               ! exp(i*k*(Ri-Rj))
               kphase = cdexp( 1.d0*DCMPLX(0.d0,1.d0)*tpi*&
                   DOT_PRODUCT( xk(:,ik), &
-                    ((taunew(:,ia)-tau(:,block_atom(parent(ia))))-(taunew(:,ja)-tau(:,block_atom(parent(ja)))) ) ))
+                    ((taunew(:,ia)-atoms(blocks(parent(ia))%atom)%pos)-(taunew(:,ja)-atoms(blocks(parent(ja))%atom)%pos) ) ))
 
-              istart = block_start(parent(ia))-1
-              jstart = block_start(parent(ja))-1
+              istart = blocks(parent(ia))%start-1
+              jstart = blocks(parent(ja))%start-1
                             
-              DO i = 1, block_dim(parent(ia))
-                DO j = 1, block_dim(parent(ja))
+              DO i = 1, blocks(parent(ia))%dim
+                DO j = 1, blocks(parent(ja))%dim
                     G(iz,ia,ja,i,j,ispin) = G(iz,ia,ja,i,j,ispin) + wk(ik)*Gloc(istart+i,jstart+j)*kphase
                 END DO
               END DO

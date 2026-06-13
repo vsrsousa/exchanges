@@ -147,9 +147,7 @@ end module meminfo
 subroutine clear()
 
   use general
-
-  if( allocated(tau) ) deallocate(tau)
-  if( allocated(atomlabel) ) deallocate(atomlabel)
+  if( allocated(atoms) ) deallocate(atoms)
   if( allocated(h) ) deallocate(h)
   if( allocated(wk) ) deallocate(wk)
   if( allocated(xk) ) deallocate(xk)
@@ -158,5 +156,6 @@ subroutine clear()
   if( allocated(block_dim) ) deallocate( block_dim )
   if( allocated(block_orbitals) ) deallocate( block_orbitals )
   if( allocated(block_start) ) deallocate(block_start)
+  if( allocated(blocks) ) deallocate(blocks)
 
 end subroutine clear

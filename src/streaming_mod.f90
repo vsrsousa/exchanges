@@ -1,6 +1,6 @@
 module streaming_mod
   use parameters, only: dp
-  use general, only: nspin, maxnnbrs
+  use general, only: nspin, maxnnbrs, blocks
   use green_mod
   use exchange_utils
   implicit none
@@ -25,11 +25,12 @@ contains
     integer, allocatable :: idim_idx(:)
     integer :: i
 
+
     allocate(Gz(nnnbrs,nnnbrs,maxbd,maxbd,nspin))
 
     allocate(idim_idx(nnnbrs))
     do i = 1, nnnbrs
-      idim_idx(i) = block_dim(parent(i))
+      idim_idx(i) = blocks(parent(i))%dim
     end do
 
     do iz = 1, nz
@@ -37,12 +38,12 @@ contains
       call compute_g_onez(nnnbrs,nblocks,maxbd,Gz,H,z(iz),parent,taunew,block_start,block_dim)
 
       do ia = 1, nnnbrs
-        istart = block_start(parent(ia))
-        idim = block_dim(parent(ia))
+        istart = blocks(parent(ia))%start
+        idim = blocks(parent(ia))%dim
         iend = istart + idim - 1
         do ja = ia+1, nnnbrs
-          jstart = block_start(parent(ja))
-          jdim = block_dim(parent(ja))
+          jstart = blocks(parent(ja))%start
+          jdim = blocks(parent(ja))%dim
           jend = jstart + jdim - 1
 
           if (idim .ne. jdim) then

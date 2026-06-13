@@ -1,6 +1,6 @@
 module hamiltonian_mod
   use iomodule
-  use parameters, only : dp
+  use parameters, only : dp, ang_to_bohr
   use general
   implicit none
 
@@ -60,23 +60,50 @@ contains
     integer :: i,j
     character(len=3) :: dummy
     character :: l_symbol
+    character(len=32) :: tmp_label
+    character(len=128) :: cell_line
+    real(dp) :: tmp_alat
+    character(len=8) :: tmp_unit
+    integer :: ios
 
     call open_input_file(iunsystem,'system.am')
 
     call find_section(iunsystem,'&cell')
-    read(iunsystem,*) alat
-    
+    cell_line = ''
+    read(iunsystem,'(A)', iostat=ios) cell_line
+    if (ios /= 0) stop 'Can''t read &cell line in system.am'
+    tmp_unit = 'bohr'
+    tmp_alat = 0.0_dp
+    read(cell_line,*, iostat=ios) tmp_alat, tmp_unit
+    if (ios /= 0) then
+      tmp_unit = 'bohr'
+      read(cell_line,*, iostat=ios) tmp_alat
+      if (ios /= 0) stop 'Bad &cell specification'
+    end if
+    ! normalize tmp_unit
+    tmp_unit = adjustl(trim(tmp_unit))
+    if ( tmp_unit(1:3) == 'ang' .or. tmp_unit == 'angstrom' ) then
+      alat = tmp_alat * ang_to_bohr
+      cell_info%unit = 'ang'
+    else
+      alat = tmp_alat
+      cell_info%unit = 'bohr'
+    end if
+
     do i = 1,3
-      read(iunsystem,*) cell(:,i)
+      read(iunsystem,*) cell_info%vec(:,i)
     end do
+    cell_info%alat = alat
     
     call find_section(iunsystem,'&atoms')
     read(iunsystem,*) natoms
-    allocate( tau(3,natoms) )
-    allocate( atomlabel(natoms) )
+
+    if (allocated(atoms)) deallocate(atoms)
+    allocate(atoms(natoms))
 
     do i=1, natoms
-      read(iunsystem,*) atomlabel(i), tau(:,i)
+      read(iunsystem,*) tmp_label, atoms(i)%pos
+      atoms(i)%label = adjustl(trim(tmp_label))
     end do
 
     call find_section(iunsystem,'&basis')
@@ -92,6 +119,21 @@ contains
 
     do i = 1, nblocks
       read(iunsystem,*) dummy, block_atom(i), block_l(i), block_dim(i), block_start(i), block_orbitals(i,1:block_dim(i))
+    end do
+
+    ! Populate derived-type blocks for easier handling (and keep legacy arrays for compatibility)
+    allocate(blocks(nblocks))
+    do i = 1, nblocks
+      blocks(i)%atom = block_atom(i)
+      blocks(i)%l = adjustl(block_l(i))
+      blocks(i)%dim = block_dim(i)
+      blocks(i)%start = block_start(i)
+      if (blocks(i)%dim > 0) then
+        allocate(blocks(i)%orbitals(blocks(i)%dim))
+        blocks(i)%orbitals = block_orbitals(i,1:blocks(i)%dim)
+      else
+        allocate(blocks(i)%orbitals(0))
+      end if
     end do
 
     call find_section(iunsystem,'&efermi')
@@ -114,7 +156,7 @@ contains
     real(dp) :: taunew_(3,maxnnbrs), vect(3), d
     integer :: parent_(maxnnbrs), nnnbrs_
 
-    integer :: i,j, iblock, nvect, index
+    integer :: i,j, iblock, nvect, idx
     logical :: have_atom_already
 
     character(len=40) :: currentline
@@ -123,7 +165,7 @@ contains
     parent = -1
     taunew = -1000
 
-    call find_nnbrs(natoms,tau,cell,atom_of_interest,distance,nnnbrs_,taunew_,parent_)
+    call find_nnbrs(natoms,atoms,atom_of_interest,distance,nnnbrs_,taunew_,parent_)
 
     select case ( trim(mode) )
       case ('list') ! list mode
@@ -137,14 +179,14 @@ contains
         do i = 1, nvect
           read(stdin,*) vect(1:3)
           do j = 1, nnnbrs_
-            call haa(taunew_, vect, have_atom_already, index)
+            call haa(taunew_, vect, have_atom_already, idx)
             if( .not. have_atom_already ) then
               write(stdout,'(/,"Error: Can not find atom in position", 3f9.5, " within sphere of ",f9.5," with ",a2," orbitals"/)') &
                 vect,distance,l_of_interest
               stop ' '
             else
               nnnbrs = nnnbrs + 1
-              parent(nnnbrs) = parent_(index)
+              parent(nnnbrs) = parent_(idx)
               taunew(:,nnnbrs) = vect
               exit
             end if
@@ -159,10 +201,10 @@ contains
 
         ! We want to consider all hamilt atoms anyway
         do i = 1, natoms
-          call haa(taunew_, tau(:,i), have_atom_already, index)
+          call haa(taunew_, atoms(i)%pos, have_atom_already, idx)
           if( .not. have_atom_already ) then
             nnnbrs_ = nnnbrs_+1
-            taunew_(:,nnnbrs_) = tau(:,i)
+            taunew_(:,nnnbrs_) = atoms(i)%pos
             parent_(nnnbrs_) = i
           end if
         end do
@@ -173,15 +215,17 @@ contains
     parent = -1
     taunew = -1000
 
-    !filter atoms by l
+    !filter atoms by l (support mixed labels like 'sp','spd')
     do i = 1, nnnbrs_
       do iblock = 1, nblocks
-        if( block_atom(iblock) .eq. parent_(i) .and. block_l(iblock) .eq. l_of_interest ) then
-          nnnbrs = nnnbrs + 1
-          parent(nnnbrs) = iblock
-          taunew(:,nnnbrs) = taunew_(:,i)
+        if( blocks(iblock)%atom .eq. parent_(i) ) then
+          if ( trim(l_of_interest) == 'all' .or. index(adjustl(blocks(iblock)%l), trim(l_of_interest)) > 0 ) then
+            nnnbrs = nnnbrs + 1
+            parent(nnnbrs) = iblock
+            taunew(:,nnnbrs) = taunew_(:,i)
+          end if
         end if
-      end do 
+      end do
     end do
 
   end subroutine atoms_list

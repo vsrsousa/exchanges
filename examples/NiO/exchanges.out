@@ -1,0 +1,122 @@
+
+     ------------------------------------------------------------------
+                           Program EXCHANGES                           
+      for calculation of exchange parameters of the Heisenberg model.  
+
+     Please cite "D. M. Korotin et al., Phys. Rev. B 91, 224405 (2015)"
+         in publications or presentations arising from this work.      
+     ------------------------------------------------------------------
+
+
+        We are using the model with the exchange term defined as:      
+                       H = -\sum_ij J_{ij} e_i e_j,                    
+
+      where e_i,j are unit vectors and sum runs once over ions pairs   
+
+     ------------------------------------------------------------------
+
+
+     Running in  32 threads
+
+     2026-06-13 14:01:42  Start execution
+     
+     Parameters of integration contour:
+     emin = -15.000  emax =  0.100  height = 0.200 (eV)
+     nz1 =  250  nz2 =  450  nz3 =  250
+
+     Cell constant (alat)  7.882813400 Bohr
+     Cell vectors (rows):
+         0.50000  0.50000  1.00000
+         0.50000  1.00000  0.50000
+         1.00000  0.50000  0.50000
+     Atoms of the initial cell:
+       Ni1   0.00000  0.00000  0.00000
+       Ni2   0.00000  0.00000  1.00000
+        O1   0.50000  0.50000  0.50000
+        O1   1.50000  1.50000  1.50000
+
+     We have the following basis for the hamiltonian and the green function:
+      16 orbitals grouped in  4 blocks:
+     Ni1 (atom  1):   5 d-orbitals (3z^2-1     xz         yz         x^2-y^2    xy         )
+     Ni2 (atom  2):   5 d-orbitals (3z^2-1     xz         yz         x^2-y^2    xy         )
+      O1 (atom  3):   3 p-orbitals (z          x          y          )
+      O1 (atom  4):   3 p-orbitals (z          x          y          )
+
+     We will consider    3 atoms: 
+      1: Ni1   0.00000  0.00000  0.00000   ( distance =   0.00000 Ang)
+      2: Ni2  -0.50000 -0.50000  0.00000   ( distance =   2.94963 Ang)
+      3: Ni2   0.00000  0.00000  1.00000   ( distance =   4.17141 Ang)
+ 
+     Exchange interaction between atoms     1  and    2
+        -0.070730 meV (distance:   0.707)
+     Orbital exchange interaction matrix J_{i,j,m,n} (in meV)
+            -0.03       -0.00       -0.00       -0.00       -0.12
+            -0.00        0.00       -0.00        0.00        0.00
+            -0.00       -0.00        0.00       -0.00        0.00
+            -0.00       -0.00        0.00       -0.01        0.01
+            -0.00       -0.00       -0.00        0.00       -0.03
+ 
+     Exchange interaction between atoms     1  and    3
+        18.954450 meV (distance:   1.000)
+     Orbital exchange interaction matrix J_{i,j,m,n} (in meV)
+            18.96        0.04        0.04        0.00       -0.00
+            -0.01       -0.00       -0.00        0.00        0.00
+            -0.01       -0.00       -0.00       -0.00        0.00
+             0.02        0.00       -0.00       -0.00       -0.00
+            -0.02       -0.00       -0.00        0.00        0.00
+ 
+     Exchange interaction between atoms     2  and    3
+        -0.011440 meV (distance:   1.225)
+     Orbital exchange interaction matrix J_{i,j,m,n} (in meV)
+            -0.01       -0.00       -0.00       -0.00        0.00
+             0.00        0.00        0.00        0.00       -0.00
+             0.00        0.00        0.00        0.00       -0.00
+            -0.00        0.00       -0.00       -0.00        0.00
+            -0.00        0.00        0.00       -0.00       -0.00
+ 
+     Computed orbitals occupations should coincide with your DFT results
+     If they differ significantly - check your integration contour.
+
+     For atom  1 spin 1
+      Orbital 1 occupation:  0.996
+      Orbital 2 occupation:  1.000
+      Orbital 3 occupation:  1.000
+      Orbital 4 occupation:  0.996
+      Orbital 5 occupation:  1.000
+
+     For atom  1 spin 2
+      Orbital 1 occupation:  0.134
+      Orbital 2 occupation:  1.000
+      Orbital 3 occupation:  1.000
+      Orbital 4 occupation:  0.133
+      Orbital 5 occupation:  1.000
+
+     For atom  2 spin 1
+      Orbital 1 occupation:  0.134
+      Orbital 2 occupation:  1.000
+      Orbital 3 occupation:  1.000
+      Orbital 4 occupation:  0.133
+      Orbital 5 occupation:  1.000
+
+     For atom  2 spin 2
+      Orbital 1 occupation:  0.996
+      Orbital 2 occupation:  1.000
+      Orbital 3 occupation:  1.000
+      Orbital 4 occupation:  0.996
+      Orbital 5 occupation:  1.000
+
+     For atom  3 spin 1
+      Orbital 1 occupation:  0.134
+      Orbital 2 occupation:  1.000
+      Orbital 3 occupation:  1.000
+      Orbital 4 occupation:  0.133
+      Orbital 5 occupation:  1.000
+
+     For atom  3 spin 2
+      Orbital 1 occupation:  0.996
+      Orbital 2 occupation:  1.000
+      Orbital 3 occupation:  1.000
+      Orbital 4 occupation:  0.996
+      Orbital 5 occupation:  1.000
+     
+     2026-06-13 14:01:44  Execution time:    2.068 seconds

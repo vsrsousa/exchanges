@@ -8,9 +8,22 @@ module general
 
   !Crystal cell
   real(dp) :: alat, cell(3,3)
-  real(dp), allocatable :: tau(:,:)
   integer :: natoms
-  character(len=3), allocatable :: atomlabel(:)
+
+  type :: cell_t
+    real(dp) :: alat
+    real(dp) :: vec(3,3)
+    character(len=8) :: unit  ! 'bohr' or 'ang'
+  end type cell_t
+
+  type(cell_t) :: cell_info
+
+  type :: atom_t
+    character(len=:), allocatable :: label
+    real(dp) :: pos(3)
+  end type atom_t
+
+  type(atom_t), allocatable :: atoms(:)
 
   !Hamiltonian
   integer :: &
@@ -26,6 +39,16 @@ module general
   
   !Basis
   integer :: nblocks
+  type :: block_t
+    integer :: atom
+    character(len=:), allocatable :: l
+    integer :: dim
+    integer, allocatable :: orbitals(:)
+    integer :: start
+  end type block_t
+
+  type(block_t), allocatable :: blocks(:)
+
   integer, allocatable :: block_atom(:), block_dim(:), block_orbitals(:,:)
   character, allocatable :: block_l(:)
 

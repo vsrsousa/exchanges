@@ -14,6 +14,7 @@ module iomodule
   integer :: globalhash = 0
   integer :: ios = 0
   integer :: iverbosity = 0 ! verbosity of the output
+  character(len=3), save :: out_unit = 'meV'
 
   contains
   
@@ -72,7 +73,7 @@ module iomodule
 
   subroutine output_matrix_by_blocks(dim,matrix)
     use parameters, only : dp
-    use general, only : nblocks, block_start, block_dim
+    use general, only : nblocks, blocks
     implicit none
 
     integer, intent(in) :: dim
@@ -83,15 +84,20 @@ module iomodule
 
     do iblock = 1, nblocks
 
-      block_end = block_start(iblock) + block_dim(iblock) - 1
+      block_end = blocks(iblock)%start + blocks(iblock)%dim - 1
       write(stdout,'(7x,a5,i3,a1)') 'Block', iblock, ':'
-      write(fmt,'(i1)') block_dim(iblock)
-      do i=block_start(iblock), block_end
-        write(stdout,'(7x,'//fmt//'f9.5)') (matrix(i,j), j=block_start(iblock), block_end)
+      write(fmt,'(i1)') blocks(iblock)%dim
+      do i=blocks(iblock)%start, block_end
+        write(stdout,'(7x,'//fmt//'f9.5)') (matrix(i,j), j=blocks(iblock)%start, block_end)
       end do
     
     end do
 
   end subroutine output_matrix_by_blocks
+
+  subroutine set_out_unit(u)
+    character(len=*), intent(in) :: u
+    out_unit = u
+  end subroutine set_out_unit
 
 end module iomodule
