@@ -7,6 +7,10 @@ program exchange_parameters
   use green_mod
   use iomodule
   use meminfo
+  use mesh_mod
+  use exchange_utils
+  use io_mod
+  use diag_mod
   use omp_lib
 
   implicit none
@@ -153,30 +157,8 @@ program exchange_parameters
   end do
 
 
-  ! define the z mesh
-  ! i will generate nz+1 mesh points as a trick for zstep calculation below
-  ! only nz points will be used in fact.
-
-  nz = nz1 + nz2 + nz3
-  allocate(z(nz+1))
-  z = cmplx(0.0,0.0,dp)
-
-  z(1) = cmplx(emin,0.d0,dp)
-
-  zstep = cmplx(0.d0,(height/nz1),dp)
-  do i = 2, nz1+1
-    z(i) = z(i-1) + zstep
-  end do
-
-  zstep = cmplx((emax-emin)/nz2,0.d0,dp)
-  do i = nz1+2, nz1+nz2
-    z(i) = z(i-1) + zstep
-  end do
-
-  zstep = -1.d0*cmplx(0.d0,(height/nz3),dp)
-  do i = nz1+nz2+1, nz+1
-    z(i) = z(i-1) + zstep
-  end do
+  ! define the z mesh (moved to mesh_mod)
+  call build_zmesh(nz1,nz2,nz3,emin,emax,height,z,nz)
 
   !Now compute full Green function for all atoms
   ! estimate memory required for G
@@ -245,7 +227,7 @@ program exchange_parameters
           sumJ_stream = sumJ_stream + sum( DIMAG(tmp_loc(1:idim,1:idim)* zstep ) )
         end do
       end do
-      write(stdout,'(5x,a,i4,1x,a,2(1x,f12.6))') 'DIAG_iz: iz=', iz, ' sumJ_baseline, sumJ_stream =', sumJ_baseline, sumJ_stream
+      call print_diag_iz(iz, sumJ_baseline, sumJ_stream)
       deallocate(tmp_loc)
     end do
     deallocate(Gtest)
@@ -277,36 +259,7 @@ program exchange_parameters
                           )
 
             if (ia==dbg_ia .and. ja==dbg_ja) then
-              write(stdout,'(5x,a,i4,a,i4)') 'DIAG_accum: ia=',ia,' ja=',ja
-              write(stdout,'(5x,a)') ' DIAG_accum: delta block (re,im):'
-              do ii = 1, idim
-                do jj = 1, idim
-                  write(stdout,'(5x,a,i3,a,i3,a,1x,f12.6,1x,f12.6)') ' DIAG_accum: delta(',ii,',',jj,')=', real(delta(istart+ii-1,istart+jj-1)), aimag(delta(istart+ii-1,istart+jj-1))
-                end do
-              end do
-
-              write(stdout,'(5x,a)') ' DIAG_accum: Gz(ia,ja,*,*,spin=2) (re,im):'
-              do ii = 1, idim
-                do jj = 1, jdim
-                  write(stdout,'(5x,a,i3,a,i3,a,1x,f12.6,1x,f12.6)') ' DIAG_accum: Gz(ia,ja)(',ii,',',jj,')=', real(Gz(ia,ja,ii,jj,2)), aimag(Gz(ia,ja,ii,jj,2))
-                end do
-              end do
-
-              write(stdout,'(5x,a)') ' DIAG_accum: Gz(ja,ia,*,*,spin=1) (re,im):'
-              do ii = 1, jdim
-                do jj = 1, idim
-                  write(stdout,'(5x,a,i3,a,i3,a,1x,f12.6,1x,f12.6)') ' DIAG_accum: Gz(ja,ia)(',ii,',',jj,')=', real(Gz(ja,ia,ii,jj,1)), aimag(Gz(ja,ia,ii,jj,1))
-                end do
-              end do
-
-              write(stdout,'(5x,a)') ' DIAG_accum: tmp1 (re,im):'
-              do ii = 1, idim
-                do jj = 1, idim
-                  write(stdout,'(5x,a,i3,a,i3,a,1x,f12.6,1x,f12.6)') ' DIAG_accum: tmp1(',ii,',',jj,')=', real(tmp1(ii,jj)), aimag(tmp1(ii,jj))
-                end do
-              end do
-
-              write(stdout,'(5x,a,1x,2(f12.6))') ' DIAG_accum: DIMAG(tmp1*zstep) sample =', DIMAG(tmp1(1,1)*zstep), DIMAG(tmp1(idim,idim)*zstep)
+              call print_diag_accum(ia,ja,idim,jdim, delta(istart:iend,istart:iend), Gz(ia,ja,1:idim,1:jdim,2), Gz(ja,ia,1:jdim,1:idim,1), tmp1(1:idim,1:idim), zstep)
             end if
 
             ! accumulate orbital-resolved contribution
@@ -342,16 +295,8 @@ program exchange_parameters
                         (taunew(2,ia) - taunew(2,ja))**2+ &
                         (taunew(3,ia) - taunew(3,ja))**2 )
         !
-        write(s_mev,'(F12.6)') real(Jexc(ia,ja))*1.0d3
-        write(s_k,'(F7.2)') real(Jexc(ia,ja))/kb_ev
-        write(s_dist,'(F7.3)') pos_delta
-        write(stdout,'(5x,A,3x,I3,2x,A,2x,I3)') 'Exchange interaction between atoms', ia, 'and', ja
-        write(stdout,'(7x,A,1x,A,1x,A)') trim(s_mev)//' meV =', trim(s_k)//' K', '(distance: '//trim(s_dist)//')'
-
-        write(stdout,*) 'Orbital exchange interaction matrix J_{i,j,m,n} (in K and meV)'
-        do i=1,block_dim(parent(ia))
-          write(stdout,'(7x,5(1x,F11.2),5x,5(1x,F12.6))') (real(Jorb(ia,ja,i,j)/kb_ev), j=1,block_dim(parent(ia))), (real(Jorb(ia,ja,i,j)*1.0d3), j=1,block_dim(parent(ia)))
-        end do
+        ! delegate printing to io_mod
+        call print_exchange_pair(ia, ja, Jexc(ia,ja), Jorb(ia,ja,1:block_dim(parent(ia)),1:block_dim(parent(ia))), kb_ev, pos_delta)
 
     END DO
   END DO
@@ -359,14 +304,7 @@ program exchange_parameters
   write(stdout,*)
   write(stdout,*) '    Computed orbitals occupations should coincide with your DFT results'
   write(stdout,*) '    If they differ significantly - check your integration contour.'
-  DO ia=1,nnnbrs
-    DO j=1,nspin
-      write(stdout,'(/5x,a8,i3,a5,i2)') 'For atom', ia, 'spin', j
-      DO i = 1, block_dim(parent(ia))
-        write(stdout,'(7x,a8,i2,a13,f6.3)') 'Orbital', i, ' occupation: ', occ(ia,j,i)
-      END DO
-    END DO
-  END DO
+  call print_occupations(occ,parent,block_dim,nnnbrs,nspin)
 
 
   if( allocated(z) ) deallocate(z)
@@ -386,24 +324,7 @@ program exchange_parameters
 
 end program exchange_parameters
 
-subroutine compute_delta(h,delta)
-  use parameters, only : dp
-  use general, only : hdim, nspin, nkp, wk
-  
-  implicit none
-  complex(dp) :: h(hdim,hdim,nkp,nspin), delta(hdim,hdim)
-  integer :: ik
-
-  delta = cmplx(0.0,0.0,dp)
-  
-  ! delta = h(spin_up) - h(spin_down)
-  do ik=1, nkp
-    delta(:,:) = delta(:,:) + wk(ik)*( h(:,:,ik,1) - h(:,:,ik,2) )
-  end do
-
-  delta = dreal(delta) 
-
-END SUBROUTINE compute_delta
+! compute_delta moved to module exchange_utils
 
 subroutine atoms_list(mode,distance,atom_of_interest,l_of_interest)
 
