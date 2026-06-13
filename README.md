@@ -12,7 +12,7 @@ The calculation consists of 3 independent parts:
 # The model
 We are using the model with the exchange term defined as: 
 ```
-H = \sum_ij J_{ij}*e_i*e_j,
+H = -\sum_ij J_{ij}*e_i*e_j,
 ```
 where e_i, and e_j are unit vectors and sum runs once over ions pairs.
 

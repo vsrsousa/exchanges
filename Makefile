@@ -31,7 +31,7 @@ DEBUG_FLAGS = -traceback -check bounds -check uninit
 
 LFLAGS =
 
- OBJ = $(BUILDDIR)/parameters.o $(BUILDDIR)/general.o $(BUILDDIR)/iomodule.o $(BUILDDIR)/find_nnbrs.o $(BUILDDIR)/green_function.o $(BUILDDIR)/meminfo.o $(BUILDDIR)/mesh_mod.o $(BUILDDIR)/exchange_utils.o $(BUILDDIR)/streaming_mod.o $(BUILDDIR)/io_mod.o $(BUILDDIR)/diag_mod.o $(BUILDDIR)/hamiltonian_mod.o $(BUILDDIR)/setup_mod.o $(BUILDDIR)/input_mod.o
+ OBJ = $(BUILDDIR)/parameters.o $(BUILDDIR)/general.o $(BUILDDIR)/iomodule.o $(BUILDDIR)/find_nnbrs.o $(BUILDDIR)/green_function.o $(BUILDDIR)/meminfo.o $(BUILDDIR)/mesh_mod.o $(BUILDDIR)/diag_mod.o $(BUILDDIR)/exchange_utils.o $(BUILDDIR)/streaming_mod.o $(BUILDDIR)/io_mod.o $(BUILDDIR)/hamiltonian_mod.o $(BUILDDIR)/setup_mod.o $(BUILDDIR)/input_mod.o $(BUILDDIR)/calc_mod.o
 
 # Choose compile command: for ifort keep normal compile (it uses -module $(BUILDDIR)),
 # for other compilers compile from inside $(BUILDDIR) so any default .mod/.o end up there.
@@ -62,10 +62,16 @@ $(BUILDDIR)/iomodule.o: $(SRCDIR)/iomodule.f90 $(BUILDDIR)/general.o $(BUILDDIR)
 $(BUILDDIR)/green_function.o: $(SRCDIR)/green_function.f90 $(BUILDDIR)/general.o $(BUILDDIR)/parameters.o | $(BUILDDIR)
 	$(COMPILE)
 
+$(BUILDDIR)/diag_mod.o: $(SRCDIR)/diag_mod.f90 $(BUILDDIR)/green_function.o | $(BUILDDIR)
+	$(COMPILE)
+
 $(BUILDDIR)/find_nnbrs.o: $(SRCDIR)/find_nnbrs.f90 $(BUILDDIR)/general.o | $(BUILDDIR)
 	$(COMPILE)
 
-$(BUILDDIR)/exchanges.o: $(SRCDIR)/exchanges.f90 $(BUILDDIR)/parameters.o $(BUILDDIR)/general.o $(BUILDDIR)/iomodule.o $(BUILDDIR)/meminfo.o $(BUILDDIR)/mesh_mod.o $(BUILDDIR)/exchange_utils.o $(BUILDDIR)/io_mod.o $(BUILDDIR)/diag_mod.o $(BUILDDIR)/hamiltonian_mod.o $(BUILDDIR)/setup_mod.o $(BUILDDIR)/input_mod.o | $(BUILDDIR)
+$(BUILDDIR)/exchange_utils.o: $(SRCDIR)/exchange_utils.f90 $(BUILDDIR)/diag_mod.o $(BUILDDIR)/general.o | $(BUILDDIR)
+	$(COMPILE)
+
+$(BUILDDIR)/exchanges.o: $(SRCDIR)/exchanges.f90 $(BUILDDIR)/parameters.o $(BUILDDIR)/general.o $(BUILDDIR)/iomodule.o $(BUILDDIR)/meminfo.o $(BUILDDIR)/mesh_mod.o $(BUILDDIR)/exchange_utils.o $(BUILDDIR)/streaming_mod.o $(BUILDDIR)/io_mod.o $(BUILDDIR)/diag_mod.o $(BUILDDIR)/hamiltonian_mod.o $(BUILDDIR)/setup_mod.o $(BUILDDIR)/input_mod.o $(BUILDDIR)/calc_mod.o | $(BUILDDIR)
 	$(COMPILE)
 
 $(BUILDDIR):

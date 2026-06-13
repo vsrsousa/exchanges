@@ -15,36 +15,22 @@ program exchange_parameters
   use streaming_mod
   use setup_mod
   use input_mod
+  use calc_mod
   use omp_lib
 
   implicit none
 
-  integer :: i, j, time_start, time_end, count_rate, nz, ia, ja, idim, jdim, iz, istart, jstart, iend, jend
-  character(len=3) :: fmt='   ' ! is used for pretty output only
-  real(dp) :: pos_delta
-  real(dp) :: est_gb, est_mb, rss_gb
-  real(dp) :: elapsed
+  integer :: time_start, time_end, count_rate, nz, ia, ja
+  real(dp) :: est_gb, est_mb, rss_gb, elapsed
   character(len=20) :: exec_ts, exec_start_ts
-  character(len=32) :: s_mev, s_k, s_dist
-  complex(dp), allocatable :: z(:), Gz(:,:,:,:,:), delta(:,:), tmp1(:,:), hksum(:,:,:)
+  complex(dp), allocatable :: z(:)
   real(dp), allocatable :: occ(:,:,:)
   integer, allocatable :: istart_idx(:), idim_idx(:), iend_idx(:)
-  integer :: ii, jj
-  complex(dp) :: zstep, tmp2
   complex(dp), allocatable :: Jexc(:,:), Jorb(:,:,:,:)
+  complex(dp), allocatable :: delta(:,:), tmp1(:,:)
+  integer :: dbg_ia, dbg_ja
   integer(kind=8) :: rss_kb, peak_kb, total_elems, est_bytes
   integer, parameter :: bytes_per_complex = 16
-  logical :: diag_pass
-  logical :: dbg_print
-  integer :: dbg_ia, dbg_ja, dbg_i, dbg_j, dbg_ispin
-  complex(dp), allocatable :: Gtest(:,:,:,:,:,:)
-  complex(dp), allocatable :: ztest(:)
-  integer :: ia2,ja2,i2,j2,ispin2
-  real(dp) :: max_abs, max_rel, a, b
-  real(dp) :: max_sum
-  
-  real(dp) :: sumJ_baseline, sumJ_stream
-  complex(dp), allocatable :: tmp_loc(:,:)
 
   ! Input parameters are below:
 
@@ -102,31 +88,7 @@ program exchange_parameters
     call run_diag_iz(diag_iz_max, z, nz, nnnbrs, nblocks, MAXVAL(block_dim), H, parent, taunew, block_start, block_dim, delta)
   end if
 
-  ! streaming over z: compute G for one z, accumulate Jorb and occupations
-  call compute_streaming(nz, z, nnnbrs, nblocks, MAXVAL(block_dim), H, parent, taunew, block_start, block_dim, delta, occ, Jorb, Jexc, dbg_ia, dbg_ja)
-
-  deallocate(istart_idx, idim_idx, iend_idx)
-
-  deallocate(tmp1)
-
-  Jexc = (-1.d0/tpi)*Jexc
-  Jorb = (-1.d0/tpi)*Jorb
-
-  DO ia = 1, nnnbrs
-    DO ja = ia+1, nnnbrs
-        ! delegate printing to io_mod
-    END DO
-  END DO
-
-  call print_all_exchanges(nnnbrs, parent, block_dim, Jexc, Jorb, taunew)
-
-  write(stdout,*)
-  write(stdout,*) '    Computed orbitals occupations should coincide with your DFT results'
-  write(stdout,*) '    If they differ significantly - check your integration contour.'
-  call print_occupations(occ,parent,block_dim,nnnbrs,nspin)
-
-
-  call finalize_exchanges(z, occ, delta, Jorb, Jexc, tmp1, istart_idx, idim_idx, iend_idx)
+  call calculate_exchanges(z, nz, H)
 
   call system_clock(time_end,count_rate)
 

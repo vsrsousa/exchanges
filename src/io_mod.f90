@@ -60,7 +60,7 @@ contains
     write(*,'(5x,a66)')   '    in publications or presentations arising from this work.      '
     write(*,'(5x,a66,/)') '------------------------------------------------------------------'
     write(*,'(/,5x,a66)') '   We are using the model with the exchange term defined as:      '
-    write(*,'(5x,a66,/)') '                   H = \sum_ij J_{ij} e_i e_j,                    '
+    write(*,'(5x,a66,/)') '                  H = -\sum_ij J_{ij} e_i e_j,                    '
     write(*,'(5x,a66,/)') ' where e_i,j are unit vectors and sum runs once over ions pairs   '
     write(*,'(5x,a66,/)') '------------------------------------------------------------------'
     write(*,'(/,5x,a11,i3,a8,/)') 'Running in ', nthreads, ' threads'

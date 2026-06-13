@@ -1,9 +1,29 @@
 module green_mod
   use parameters, only : dp, tpi
-  use exchange_utils
   use general, only : hdim, nkp, nspin, xk, wk, tau, block_atom, efermi
   implicit none
 contains
+
+  subroutine inverse_complex_matrix(dim,a)
+    use parameters, only : dp
+    implicit none
+    integer :: dim, info
+    integer, allocatable :: ipiv(:)
+    complex(dp), intent(inout) :: a(dim,dim)
+    complex(dp), allocatable :: work(:)
+
+    allocate(ipiv(dim))
+    allocate(work(dim))
+
+    call ZGETRF(dim,dim,a,dim,ipiv,info)
+    if(info /= 0) stop "inverse_complex_matrix Error in ZGETRF"
+    call ZGETRI(dim,a,dim,ipiv,work,dim,info)
+    if(info /= 0) stop "inverse_complex_matrix Error in ZGETRI"
+
+    if (allocated(ipiv)) deallocate(ipiv)
+    if (allocated(work)) deallocate(work)
+
+  end subroutine inverse_complex_matrix
 
   SUBROUTINE compute_g_onez(natoms,nblocks,gdim,Gz,H,z,parent,taunew,block_start,block_dim, &
                             debug_print, dbg_ia, dbg_ja, dbg_i, dbg_j, dbg_ispin)
