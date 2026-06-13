@@ -54,4 +54,24 @@ contains
 
   end subroutine accumulate_pair
 
+  subroutine accumulate_occupations(nnnbrs, idim_idx, nspin, Gz, zstep, occ)
+    implicit none
+    integer, intent(in) :: nnnbrs, nspin
+    integer, intent(in) :: idim_idx(:)
+    complex(dp), intent(in) :: Gz(:,:,:,:,:)
+    complex(dp), intent(in) :: zstep
+    real(dp), intent(inout) :: occ(:,:,:)
+    integer :: ia, j, i, idim
+
+    do ia = 1, nnnbrs
+      idim = idim_idx(ia)
+      do j = 1, nspin
+        do i = 1, idim
+          occ(ia,j,i) = occ(ia,j,i) + ((-1.d0/pi) * DIMAG( Gz(ia,ia,i,i,j) * zstep ))
+        end do
+      end do
+    end do
+
+  end subroutine accumulate_occupations
+
 end module exchange_utils

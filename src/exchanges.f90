@@ -260,13 +260,7 @@ program exchange_parameters
     end do
 
     ! accumulate orbital occupations from Gz diagonal
-    do ia = 1, nnnbrs
-      do j = 1, nspin
-        do i = 1, idim_idx(ia)
-          occ(ia,j,i) = occ(ia,j,i) + ((-1.d0/pi) * DIMAG( Gz(ia,ia,i,i,j) * zstep ))
-        end do
-      end do
-    end do
+    call accumulate_occupations(nnnbrs, idim_idx, nspin, Gz, zstep, occ)
 
   end do
 
