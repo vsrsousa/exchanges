@@ -1,22 +1,5 @@
 ! Copyright (C) Dmitry Korotin dmitry@korotin.name
 
-subroutine clear()
-
-  use general
-
-  if( allocated(tau) ) deallocate(tau)
-  if( allocated(atomlabel) ) deallocate(atomlabel)
-  if( allocated(h) ) deallocate(h)
-  if( allocated(wk) ) deallocate(wk)
-  if( allocated(xk) ) deallocate(xk)
-  if( allocated(block_atom) ) deallocate( block_atom )
-  if( allocated(block_l) ) deallocate( block_l )
-  if( allocated(block_dim) ) deallocate( block_dim )
-  if( allocated(block_orbitals) ) deallocate( block_orbitals )
-  if( allocated(block_start) ) deallocate(block_start)
-
-end subroutine clear
-
 program exchange_parameters
 
   use general
