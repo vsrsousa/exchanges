@@ -175,7 +175,6 @@ program exchange_parameters
   call print_estimated_G(est_bytes)
 
   ! allocate temporary storage for single-z Green function and occupations (streaming)
-  allocate(Gz(nnnbrs,nnnbrs,MAXVAL(block_dim),MAXVAL(block_dim),nspin))
   allocate(occ(nnnbrs,nspin,MAXVAL(block_dim)))
   occ = 0.0_dp
   ! memory status after allocating per-z buffers omitted to match reference format
@@ -233,7 +232,6 @@ program exchange_parameters
 
 
   if( allocated(z) ) deallocate(z)
-  if( allocated(Gz) ) deallocate(Gz)
   if( allocated(occ) ) deallocate(occ)
   if( allocated(delta) ) deallocate(delta)
   if( allocated(Jorb) ) deallocate(Jorb)
