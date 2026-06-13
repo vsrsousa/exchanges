@@ -1,3 +1,18 @@
+# Build and run artifacts
+runs/
+build/
+bin/
+
+# Editor and OS files
+.DS_Store
+*.swp
+*.swo
+*.bak
+*~
+
+# Python cache
+__pycache__/
+.pytest_cache/
 *.o
 *.x
 *.mod
