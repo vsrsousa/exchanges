@@ -358,73 +358,7 @@ subroutine atoms_list(mode,distance,atom_of_interest,l_of_interest)
 
   end select
 
-  nnnbrs = 0
-  parent = -1
-  taunew = -1000
 
-  !filter atoms by l
-  do i = 1, nnnbrs_
-    do iblock = 1, nblocks
-      if( block_atom(iblock) .eq. parent_(i) .and. block_l(iblock) .eq. l_of_interest ) then
-        nnnbrs = nnnbrs + 1
-        parent(nnnbrs) = iblock
-        taunew(:,nnnbrs) = taunew_(:,i)
-      end if
-    end do 
-  end do
-
-end subroutine atoms_list
-
-subroutine read_crystal()
-
-  use iomodule
-  use parameters, only : dp
-  use general
-  
-  implicit none
-  integer :: i,j
-  character(len=3) :: dummy
-  character :: l_symbol
-
-  call open_input_file(iunsystem,'system.am')
-
-  call find_section(iunsystem,'&cell')
-  read(iunsystem,*) alat
-  
-  do i = 1,3
-    read(iunsystem,*) cell(:,i)
-  end do
-  
-  call find_section(iunsystem,'&atoms')
-  read(iunsystem,*) natoms
-  allocate( tau(3,natoms) )
-  allocate( atomlabel(natoms) )
-
-  do i=1, natoms
-    read(iunsystem,*) atomlabel(i), tau(:,i)
-  end do
-
-  call find_section(iunsystem,'&basis')
-  read(iunsystem,*) i, nblocks
-  if(i .ne. hdim) stop 'Basis dimention in system.am and hamilt.am are unequal'
-
-  allocate( block_atom(nblocks) )
-  allocate( block_l(nblocks) )
-  allocate( block_dim(nblocks) )
-  allocate( block_orbitals(nblocks,7) )
-  allocate( block_start(nblocks) )
-  block_orbitals = 0
-
-  do i = 1, nblocks
-    read(iunsystem,*) dummy, block_atom(i), block_l(i), block_dim(i), block_start(i), block_orbitals(i,1:block_dim(i))
-  end do
-
-  call find_section(iunsystem,'&efermi')
-  read(iunsystem,*) efermi
-
-  close(iunsystem)
-
-end subroutine read_crystal
 
  
 
