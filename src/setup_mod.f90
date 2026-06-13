@@ -15,7 +15,8 @@ contains
     integer, intent(inout) :: atom_of_interest
     implicit none
     complex(dp), allocatable :: hksum(:,:,:)
-    integer :: i
+    integer :: i, j
+    character(len=8) :: fmt
 
     call read_hamilt()
     call read_crystal()
