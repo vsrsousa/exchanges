@@ -29,6 +29,7 @@ program exchange_parameters
   use exchange_utils
   use io_mod
   use diag_mod
+  use streaming_mod
   use omp_lib
 
   implicit none
