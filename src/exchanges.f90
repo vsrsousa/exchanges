@@ -252,20 +252,9 @@ program exchange_parameters
           stop 'Not equal subblocks size'
         end if
 
-        tmp1 = cmplx(0.0,0.0,dp)
-        tmp1(1:idim,1:idim) = MATMUL( &
-                          MATMUL(delta(istart:iend,istart:iend),Gz(ia,ja,1:idim,1:jdim,2)), &
-                          MATMUL(delta(jstart:jend,jstart:jend),Gz(ja,ia,1:jdim,1:idim,1)) &
-                          )
-
-            if (ia==dbg_ia .and. ja==dbg_ja) then
-              call print_diag_accum(ia,ja,idim,jdim, delta(istart:iend,istart:iend), Gz(ia,ja,1:idim,1:jdim,2), Gz(ja,ia,1:jdim,1:idim,1), tmp1(1:idim,1:idim), zstep)
-            end if
-
-            ! accumulate orbital-resolved contribution
-            Jorb(ia,ja,1:idim,1:idim) = Jorb(ia,ja,1:idim,1:idim) + DIMAG(tmp1(1:idim,1:idim)*zstep)
-            ! accumulate scalar exchange (sum over orbital block)
-            Jexc(ia,ja) = Jexc(ia,ja) + sum( DIMAG(tmp1(1:idim,1:idim)*zstep) )
+        call accumulate_pair(ia, ja, idim, jdim, delta(istart:iend,istart:iend), delta(jstart:jend,jstart:jend), &
+     &                        Gz(ia,ja,1:idim,1:jdim,2), Gz(ja,ia,1:jdim,1:idim,1), zstep, &
+     &                        Jorb(ia,ja,1:idim,1:idim), Jexc(ia,ja), dbg_ia, dbg_ja)
 
       end do
     end do
