@@ -10,7 +10,7 @@
 
 # Intel fortran linux
  FC = ifort 
- FFLAGS = -qopenmp -O2 -g -mavx -I$(SRCDIR) -I$(BUILDDIR)
+ FFLAGS = -qopenmp -O2 -g -mavx -I$(BUILDDIR) -I$(SRCDIR)
 
 # place compiled module files into $(BUILDDIR)
 ifeq ($(findstring ifort,$(FC)),ifort)
@@ -32,6 +32,14 @@ LFLAGS =
 
  OBJ = $(BUILDDIR)/parameters.o $(BUILDDIR)/general.o $(BUILDDIR)/iomodule.o $(BUILDDIR)/find_nnbrs.o $(BUILDDIR)/green_function.o $(BUILDDIR)/meminfo.o
 
+# Choose compile command: for ifort keep normal compile (it uses -module $(BUILDDIR)),
+# for other compilers compile from inside $(BUILDDIR) so any default .mod/.o end up there.
+ifeq ($(findstring ifort,$(FC)),ifort)
+COMPILE = $(FC) -c $(FFLAGS) -o $@ $<
+else
+COMPILE = cd $(BUILDDIR) && $(FC) -c $(FFLAGS) -o $(notdir $@) ../$<
+endif
+
 all: $(PROG)
  
 $(PROG):  $(BUILDDIR)/exchanges.o $(OBJ) | $(BINDIR)
@@ -42,22 +50,22 @@ clean:
 
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.f90 | $(BUILDDIR)
-	$(FC) -c $(FFLAGS) -o $@ $<
+	$(COMPILE)
 
 $(BUILDDIR)/general.o: $(SRCDIR)/general.f90 $(BUILDDIR)/parameters.o | $(BUILDDIR)
-	$(FC) -c $(FFLAGS) -o $@ $<
+	$(COMPILE)
 
 $(BUILDDIR)/iomodule.o: $(SRCDIR)/iomodule.f90 $(BUILDDIR)/general.o $(BUILDDIR)/parameters.o | $(BUILDDIR)
-	$(FC) -c $(FFLAGS) -o $@ $<
+	$(COMPILE)
 
 $(BUILDDIR)/green_function.o: $(SRCDIR)/green_function.f90 $(BUILDDIR)/general.o $(BUILDDIR)/parameters.o | $(BUILDDIR)
-	$(FC) -c $(FFLAGS) -o $@ $<
+	$(COMPILE)
 
 $(BUILDDIR)/find_nnbrs.o: $(SRCDIR)/find_nnbrs.f90 $(BUILDDIR)/general.o | $(BUILDDIR)
-	$(FC) -c $(FFLAGS) -o $@ $<
+	$(COMPILE)
 
 $(BUILDDIR)/exchanges.o: $(SRCDIR)/exchanges.f90 $(BUILDDIR)/parameters.o $(BUILDDIR)/general.o $(BUILDDIR)/iomodule.o $(BUILDDIR)/meminfo.o | $(BUILDDIR)
-	$(FC) -c $(FFLAGS) -o $@ $<
+	$(COMPILE)
 
 $(BUILDDIR):
 	mkdir -p $(BUILDDIR)
