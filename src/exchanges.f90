@@ -206,34 +206,7 @@ program exchange_parameters
 
   ! --- Per-iz Jorb checksum diagnostics (recompute now that delta is available)
   if (diag_iz_max .gt. 0) then
-    allocate(Gtest(1,nnnbrs,nnnbrs,MAXVAL(block_dim),MAXVAL(block_dim),nspin))
-    do iz = 1, diag_iz_max
-      zstep = z(iz+1) - z(iz)
-      allocate(tmp_loc(MAXVAL(block_dim),MAXVAL(block_dim)))
-      call compute_g(1,nnnbrs,nblocks,MAXVAL(block_dim),Gtest,H,(/z(iz)/),parent,taunew,block_start,block_dim)
-      call compute_g_onez(nnnbrs,nblocks,MAXVAL(block_dim),Gz,H,z(iz),parent,taunew,block_start,block_dim)
-      sumJ_baseline = 0.0_dp
-      sumJ_stream = 0.0_dp
-      do ia2 = 1, nnnbrs
-        istart = block_start(parent(ia2))
-        idim = block_dim(parent(ia2))
-        iend = istart + idim - 1
-        do ja2 = ia2+1, nnnbrs
-          jstart = block_start(parent(ja2))
-          jdim = block_dim(parent(ja2))
-          jend = jstart + jdim - 1
-          if (idim .ne. jdim) cycle
-          tmp_loc = cmplx(0.0,0.0,dp)
-          tmp_loc(1:idim,1:idim) = MATMUL( MATMUL(delta(istart:iend,istart:iend), Gtest(1,ia2,ja2,1:idim,1:jdim,2)), MATMUL(delta(jstart:jend,jstart:jend), Gtest(1,ja2,ia2,1:jdim,1:idim,1)) )
-          sumJ_baseline = sumJ_baseline + sum( DIMAG(tmp_loc(1:idim,1:idim)* zstep ) )
-          tmp_loc(1:idim,1:idim) = MATMUL( MATMUL(delta(istart:iend,istart:iend), Gz(ia2,ja2,1:idim,1:jdim,2)), MATMUL(delta(jstart:jend,jstart:jend), Gz(ja2,ia2,1:jdim,1:idim,1)) )
-          sumJ_stream = sumJ_stream + sum( DIMAG(tmp_loc(1:idim,1:idim)* zstep ) )
-        end do
-      end do
-      call print_diag_iz(iz, sumJ_baseline, sumJ_stream)
-      deallocate(tmp_loc)
-    end do
-    deallocate(Gtest)
+    call run_diag_iz(diag_iz_max, z, nz, nnnbrs, nblocks, MAXVAL(block_dim), H, parent, taunew, block_start, block_dim, delta)
   end if
 
   ! streaming over z: compute G for one z, accumulate Jorb and occupations
