@@ -1,19 +1,19 @@
 ! Copyright (C) Dmitry Korotin dmitry@korotin.name
 
 subroutine find_nnbrs(natoms,tau,cell,aoi,maxdistance,nnnbrs,taunew,parent)
-	
-	use parameters, only : dp, maxnnbrs
-	implicit none
+    
+    use parameters, only : dp, maxnnbrs
+    implicit none
 
-	integer, intent(in) :: natoms, & ! Number of atoms in initial cell
-						   					 aoi ! atom of interest. We will search neighbours of this atom
-	real(dp), intent(in) :: tau(3,natoms), & ! positions of atoms in the initial cell
-													cell(3,3), & ! cell vectors row-wise (in units of alat)
-													maxdistance ! max distance betwee aoi and neighbouring atom
+    integer, intent(in) :: natoms, & ! Number of atoms in initial cell
+                                   aoi ! atom of interest. We will search neighbours of this atom
+    real(dp), intent(in) :: tau(3,natoms), & ! positions of atoms in the initial cell
+                                                    cell(3,3), & ! cell vectors row-wise (in units of alat)
+                                                    maxdistance ! max distance betwee aoi and neighbouring atom
 
-	real(dp), intent(out) :: taunew(3,maxnnbrs) ! nnbrhds positions
-	integer, intent(out) :: nnnbrs, & ! total number of nearest neighbours
-													parent(maxnnbrs) ! arent atom for each neighbour
+    real(dp), intent(out) :: taunew(3,maxnnbrs) ! nnbrhds positions
+    integer, intent(out) :: nnnbrs, & ! total number of nearest neighbours
+                                                    parent(maxnnbrs) ! arent atom for each neighbour
 
   integer :: i, j, k, ntransl, iatom, new_a, parenttmp, dummy
   real(dp) v(3), new_pos(3), distance, dist(maxnnbrs), distt, tautmp(3)

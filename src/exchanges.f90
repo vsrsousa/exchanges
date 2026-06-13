@@ -230,7 +230,7 @@ program exchange_parameters
         
         write(stdout,'(/7x,a62)') "Orbital exchange interaction matrix J_{i,j,m,n} (in K and meV):"
         DO i=1,block_dim(parent(ia))
-          write(stdout, '(7x,5i5,8x,5f9.5)' ) INT(Jorb(ia,ja,i,1:block_dim(parent(ia)))/kb_ev), &
+          write(stdout,'(7x,5i5,8x,5f9.5)' ) INT(Jorb(ia,ja,i,1:block_dim(parent(ia)))/kb_ev), &
                                               Jorb(ia,ja,i,1:block_dim(parent(ia)))*1.d3
         END DO
 

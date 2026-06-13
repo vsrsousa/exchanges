@@ -1,4 +1,7 @@
-PROG = exchanges.x 
+ PROG = bin/exchanges.x 
+ SRCDIR = src
+ BUILDDIR = build
+ BINDIR = bin
 
 #gfortan Mac Os
 # FC = gfortran 
@@ -7,7 +10,7 @@ PROG = exchanges.x
 
 # Intel fortran linux
  FC = ifort 
- FFLAGS = -qopenmp -O2 -g -mavx
+ FFLAGS = -qopenmp -O2 -g -mavx -I$(SRCDIR)
  LIBS = -qopenmp -lmkl_intel_lp64  -lmkl_sequential -lmkl_core
 #uncomment for debug:
 # FFLAGS = -qopenmp -O0 -g -mavx -traceback -check
@@ -20,17 +23,27 @@ PROG = exchanges.x
 
 LFLAGS =
 
-OBJ = parameters.o general.o iomodule.o find_nnbrs.o green_function.o
+ OBJ = $(BUILDDIR)/parameters.o $(BUILDDIR)/general.o $(BUILDDIR)/iomodule.o $(BUILDDIR)/find_nnbrs.o $(BUILDDIR)/green_function.o
 
 all: $(PROG)
  
-exchanges.x:  $(OBJ) exchanges.o
-	$(FC) $(LFLAGS) -o $@ exchanges.o $(OBJ) $(LIBS)
+$(PROG):  $(BUILDDIR)/exchanges.o $(OBJ) | $(BINDIR)
+	$(FC) $(LFLAGS) -o $@ $(BUILDDIR)/exchanges.o $(OBJ) $(LIBS)
 
 clean:
-	rm *.o *.mod
-	
-%.o: %.f90
-	$(FC) -c $(FFLAGS) -o $(*F).o $<
+	rm -rf $(BUILDDIR) $(BINDIR) *.mod
+
+
+$(BUILDDIR)/%.o: $(SRCDIR)/%.f90 | $(BUILDDIR)
+	$(FC) -c $(FFLAGS) -o $@ $<
+
+$(BUILDDIR)/exchanges.o: $(SRCDIR)/exchanges.f90 | $(BUILDDIR)
+	$(FC) -c $(FFLAGS) -o $@ $<
+
+$(BUILDDIR):
+	mkdir -p $(BUILDDIR)
+
+$(BINDIR):
+	mkdir -p $(BINDIR)
 	
 	
