@@ -5,6 +5,7 @@ program exchange_parameters
   use general
   use parameters
   use iomodule
+  use meminfo
   use omp_lib
 
   implicit none
@@ -12,9 +13,12 @@ program exchange_parameters
   integer :: i, j, time_start, time_end, count_rate, nz, ia, ja, idim, jdim, iz, istart, jstart, iend, jend
   character(len=3) :: fmt='   ' ! is used for pretty output only
   real(dp) :: pos_delta
+  real(dp) :: est_gb, est_mb, rss_gb
   complex(dp), allocatable :: z(:), G(:,:,:,:,:,:), delta(:,:), tmp1(:,:), hksum(:,:,:)
   complex(dp) :: zstep, tmp2
   real(dp), allocatable :: Jexc(:,:), Jexc0(:), Jorb(:,:,:,:)
+  integer(kind=8) :: rss_kb, peak_kb, total_elems, est_bytes
+  integer, parameter :: bytes_per_complex = 16
   
 
   ! Input parameters are below:
@@ -69,6 +73,11 @@ program exchange_parameters
   
   call read_hamilt()
   call read_crystal()
+
+  ! report memory after reading input H and crystal
+  call get_mem_kb(rss_kb, peak_kb)
+  rss_gb = real(rss_kb,dp) / (1024.0_dp*1024.0_dp)
+  write(stdout,'(/5x,a,1x,i12,a,2x,a,F8.3)') 'Memory after reading inputs (kB)=', rss_kb, '  VmPeak(kB)=', peak_kb, '(', rss_gb, 'GB)'
 
   if(atom_of_interest == -100) atom_of_interest = block_atom(1)
 
@@ -151,7 +160,17 @@ program exchange_parameters
   end do
 
   !Now compute full Green function for all atoms
+  ! estimate memory required for G
+  total_elems = int(nz,8) * int(nnnbrs,8) * int(nnnbrs,8) * int(MAXVAL(block_dim),8) * int(MAXVAL(block_dim),8) * int(nspin,8)
+  est_bytes = total_elems * bytes_per_complex
+  est_mb = real(est_bytes,dp) / 1024.0_dp / 1024.0_dp
+  est_gb = real(est_bytes,dp) / 1024.0_dp / 1024.0_dp / 1024.0_dp
+  write(stdout,'(/5x,a,I12,a,2x,a,F8.3,a,2x,a,F8.3)') 'Estimated memory for G (bytes)=', est_bytes, '(', est_mb, 'MB', ')', '(', est_gb, 'GB', ')'
+
   allocate(G(nz,nnnbrs,nnnbrs,MAXVAL(block_dim),MAXVAL(block_dim),nspin))
+  call get_mem_kb(rss_kb, peak_kb)
+  rss_gb = real(rss_kb,dp) / (1024.0_dp*1024.0_dp)
+  write(stdout,'(/5x,a,1x,i12,2x,a,F8.3)') 'Memory after allocating G (kB)=', rss_kb, ' (', rss_gb, 'GB)'
 
   call compute_g(nz,nnnbrs,nblocks,MAXVAL(block_dim),G,H,z(1:nz),parent(1:nnnbrs), &
                         taunew(:,1:nnnbrs),block_start(1:nblocks),block_dim(1:nblocks))
