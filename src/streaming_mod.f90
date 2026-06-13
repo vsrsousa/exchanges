@@ -1,6 +1,6 @@
 module streaming_mod
   use parameters, only: dp
-  use general, only: nspin
+  use general, only: nspin, maxnnbrs
   use green_mod
   use exchange_utils
   implicit none
@@ -12,7 +12,7 @@ contains
     complex(dp), intent(in) :: z(:)
     complex(dp), intent(in) :: H(:,:,:,:)
     integer, intent(in) :: parent(:), block_start(:), block_dim(:)
-    real(dp), intent(in) :: taunew(3, :)
+    real(dp), intent(in) :: taunew(3, maxnnbrs)
     complex(dp), intent(in) :: delta(:,:)
     real(dp), intent(inout) :: occ(:,:,:)
     complex(dp), intent(inout) :: Jorb(:,:,:,:)
