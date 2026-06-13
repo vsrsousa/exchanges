@@ -18,6 +18,7 @@ contains
     write(s_mev,'(F12.6)') real(Jexc_scalar)*1.0d3
     write(s_k,'(F7.2)') real(Jexc_scalar)/kb_ev
     write(s_dist,'(F7.3)') pos_delta
+    write(*,*)
     write(*,'(5x,A,3x,I3,2x,A,2x,I3)') 'Exchange interaction between atoms', ia, 'and', ja
     write(*,'(5x,A,1x,A,1x,A)') trim(s_mev)//' meV =', trim(s_k)//' K', '(distance: '//trim(s_dist)//')'
 
