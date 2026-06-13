@@ -13,6 +13,7 @@ program exchange_parameters
   use io_mod
   use diag_mod
   use streaming_mod
+  use setup_mod
   use omp_lib
 
   implicit none
