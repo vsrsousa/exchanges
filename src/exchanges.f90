@@ -36,32 +36,19 @@ program exchange_parameters
   integer, parameter :: bytes_per_complex = 16
   logical :: diag_pass
   logical :: dbg_print
-  logical :: diag_verbose
   integer :: dbg_ia, dbg_ja, dbg_i, dbg_j, dbg_ispin
   complex(dp), allocatable :: Gtest(:,:,:,:,:,:)
   complex(dp), allocatable :: ztest(:)
   integer :: ia2,ja2,i2,j2,ispin2
   real(dp) :: max_abs, max_rel, a, b
   real(dp) :: max_sum
-  integer :: diag_iz_max
+  
   real(dp) :: sumJ_baseline, sumJ_stream
   complex(dp), allocatable :: tmp_loc(:,:)
 
   ! Input parameters are below:
 
-  ! Intergation mesh:
-  integer :: nz1, nz2, nz3
-  real(dp) :: emin, emax, height
-
-  integer :: atom_of_interest
-  character(len=1) :: l
-
-  real(dp) :: distance ! distance for the nearest neighbours search
-                       ! could be used as integer do define a coordination sphere number
-                       ! if mode='csphere'
-  character(len=10) :: mode ! mode for the nearest neighbours search
-
-  ! namelist and defaults moved to input_mod
+  ! namelist and defaults are in `input_mod`
 
 
   call system_clock(time_start,count_rate)
