@@ -6,6 +6,7 @@ program exchange_parameters
   use parameters
   use green_mod
   use iomodule
+  use hamiltonian_mod
   use meminfo
   use mesh_mod
   use exchange_utils
@@ -503,11 +504,6 @@ subroutine read_hamilt()
   
   close(iunhamilt)
 
-end subroutine read_hamilt
 
-! read_hamilt moved to module hamiltonian_mod
-
-
-  use general
 
 
