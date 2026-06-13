@@ -71,6 +71,9 @@ program exchange_parameters
   mode = 'distance'
   l = 'd'
   atom_of_interest = -100
+  diag_iz_max = 0
+  logical :: diag_verbose
+  diag_verbose = .false.
 
   call system_clock(time_start,count_rate)
 
