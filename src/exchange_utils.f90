@@ -36,6 +36,7 @@ contains
     complex(dp), intent(inout) :: Jorb_block(idim,idim)
     complex(dp), intent(inout) :: Jexc_scalar
     integer, intent(in) :: dbg_ia, dbg_ja
+    integer :: i
     complex(dp), allocatable :: tmp1(:,:)
 
     allocate(tmp1(idim,idim))
@@ -48,7 +49,7 @@ contains
     end if
 
     Jorb_block(1:idim,1:idim) = Jorb_block(1:idim,1:idim) + DIMAG(tmp1(1:idim,1:idim)*zstep)
-    Jexc_scalar = Jexc_scalar + sum( DIMAG(tmp1(1:idim,1:idim)*zstep) )
+    Jexc_scalar = Jexc_scalar + sum( (/ ( DIMAG(tmp1(i,i)*zstep), i = 1, idim ) /) )
 
     deallocate(tmp1)
 
@@ -113,25 +114,6 @@ contains
 
   end subroutine init_exchange_buffers
 
-  subroutine inverse_complex_matrix(dim,a)
-    use parameters, only : dp
-    implicit none
-    integer :: dim, info
-    integer, allocatable :: ipiv(:)
-    complex(dp), intent(inout) :: a(dim,dim)
-    complex(dp), allocatable :: work(:)
 
-    allocate(ipiv(dim))
-    allocate(work(dim))
-
-    call ZGETRF(dim,dim,a,dim,ipiv,info)
-    if(info /= 0) stop "inverse_complex_matrix Error in ZGETRF"
-    call ZGETRI(dim,a,dim,ipiv,work,dim,info)
-    if(info /= 0) stop "inverse_complex_matrix Error in ZGETRI"
-
-    if (allocated(ipiv)) deallocate(ipiv)
-    if (allocated(work)) deallocate(work)
-
-  end subroutine inverse_complex_matrix
 
 end module exchange_utils
