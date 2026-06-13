@@ -14,6 +14,7 @@ program exchange_parameters
   use diag_mod
   use streaming_mod
   use setup_mod
+  use input_mod
   use omp_lib
 
   implicit none
@@ -60,28 +61,14 @@ program exchange_parameters
                        ! if mode='csphere'
   character(len=10) :: mode ! mode for the nearest neighbours search
 
-  namelist /exchanges/ nz1, nz2, nz3, height, emin, emax, distance, iverbosity, mode, l, atom_of_interest
+  ! namelist and defaults moved to input_mod
 
-  ! default values
-  nz1 = 150
-  nz2 = 3000
-  nz3 = 150
-  height = 0.01
-  emin = -30.0
-  emax = 0.0
-  distance = 8.d-1
-  mode = 'distance'
-  l = 'd'
-  atom_of_interest = -100
-  diag_iz_max = 0
-  diag_verbose = .false.
 
   call system_clock(time_start,count_rate)
   call get_timestamp(exec_start_ts)
   call print_program_header(exec_start_ts, OMP_get_max_threads())
 
-  read(stdin, exchanges, iostat=ios)
-  if( ios .ne. 0 ) stop "Can't read input"
+  call read_input()
 
   write(stdout,'(5x,a34)') 'Parameters of integration contour:'
   write(stdout,'(5x,a7,f7.3,a9,f6.3,a11,f5.3,a5)') 'emin = ', emin, '  emax = ', emax, '  height = ', height,' (eV)'
