@@ -9,11 +9,11 @@ module setup_mod
 contains
 
   subroutine setup_system(mode, distance, l, atom_of_interest)
+    implicit none
     character(len=*), intent(in) :: mode
     real(dp), intent(in) :: distance
     character(len=1), intent(in) :: l
     integer, intent(inout) :: atom_of_interest
-    implicit none
     complex(dp), allocatable :: hksum(:,:,:)
     integer :: i, j
     character(len=8) :: fmt
