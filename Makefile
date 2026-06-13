@@ -31,7 +31,7 @@ DEBUG_FLAGS = -traceback -check bounds -check uninit
 
 LFLAGS =
 
- OBJ = $(BUILDDIR)/parameters.o $(BUILDDIR)/general.o $(BUILDDIR)/iomodule.o $(BUILDDIR)/find_nnbrs.o $(BUILDDIR)/green_function.o $(BUILDDIR)/meminfo.o $(BUILDDIR)/mesh_mod.o $(BUILDDIR)/exchange_utils.o $(BUILDDIR)/io_mod.o $(BUILDDIR)/diag_mod.o $(BUILDDIR)/hamiltonian_mod.o
+ OBJ = $(BUILDDIR)/parameters.o $(BUILDDIR)/general.o $(BUILDDIR)/iomodule.o $(BUILDDIR)/find_nnbrs.o $(BUILDDIR)/green_function.o $(BUILDDIR)/meminfo.o $(BUILDDIR)/mesh_mod.o $(BUILDDIR)/exchange_utils.o $(BUILDDIR)/streaming_mod.o $(BUILDDIR)/io_mod.o $(BUILDDIR)/diag_mod.o $(BUILDDIR)/hamiltonian_mod.o
 
 # Choose compile command: for ifort keep normal compile (it uses -module $(BUILDDIR)),
 # for other compilers compile from inside $(BUILDDIR) so any default .mod/.o end up there.

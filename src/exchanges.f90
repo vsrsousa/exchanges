@@ -253,35 +253,7 @@ program exchange_parameters
   end if
 
   ! streaming over z: compute G for one z, accumulate Jorb and occupations
-  do iz = 1, nz
-    zstep = z(iz+1) - z(iz)
-    call compute_g_onez(nnnbrs,nblocks,MAXVAL(block_dim),Gz,H,z(iz),parent,taunew,block_start,block_dim)
-
-    do ia = 1, nnnbrs
-      istart = istart_idx(ia)
-      idim = idim_idx(ia)
-      iend = iend_idx(ia)
-      do ja = ia+1, nnnbrs
-        jstart = istart_idx(ja)
-        jdim = idim_idx(ja)
-        jend = iend_idx(ja)
-
-        if (idim .ne. jdim) then
-          write(stdout,*) ia,ja,idim,jdim
-          stop 'Not equal subblocks size'
-        end if
-
-        call accumulate_pair(ia, ja, idim, jdim, delta(istart:iend,istart:iend), delta(jstart:jend,jstart:jend), &
-     &                        Gz(ia,ja,1:idim,1:jdim,2), Gz(ja,ia,1:jdim,1:idim,1), zstep, &
-     &                        Jorb(ia,ja,1:idim,1:idim), Jexc(ia,ja), dbg_ia, dbg_ja)
-
-      end do
-    end do
-
-    ! accumulate orbital occupations from Gz diagonal
-    call accumulate_occupations(nnnbrs, idim_idx, nspin, Gz, zstep, occ)
-
-  end do
+  call compute_streaming(nz, z, nnnbrs, nblocks, MAXVAL(block_dim), H, parent, taunew, block_start, block_dim, delta, occ, Jorb, Jexc, dbg_ia, dbg_ja)
 
   deallocate(istart_idx, idim_idx, iend_idx)
 
