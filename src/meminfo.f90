@@ -33,7 +33,7 @@ contains
     character(len=*), intent(in) :: stage
     integer(kind=8) :: rss_kb, vmpeak_kb
     real(8) :: rss_gb
-    character(len=64) :: s_rss_kb, s_vmpeak_kb, s_rss_gb, line
+    character(len=128) :: s_rss_kb, s_vmpeak_kb, s_rss_gb, line
       ! character(len=20) :: ts
 
     rss_kb = -1_8
@@ -58,7 +58,7 @@ contains
     implicit none
     integer(kind=8), intent(in) :: est_bytes
     real(8) :: est_mb, est_gb
-    character(len=64) :: s_est_bytes, s_est_mb, s_est_gb, line
+    character(len=128) :: s_est_bytes, s_est_mb, s_est_gb, line
     character(len=20) :: ts
 
     est_mb = real(est_bytes,8) / 1024.0_8 / 1024.0_8
@@ -73,24 +73,47 @@ contains
     write(*,'(5x,A)') ''
       write(*,'(5x,A)') trim(line)
   end subroutine print_estimated_G
+  pure function int4_to_str(val) result(str)
+    integer, intent(in) :: val
+    character(len=4) :: str
+    integer :: tmp, i, d
+    tmp = val
+    do i = 4, 1, -1
+      d = mod(tmp,10)
+      str(i:i) = achar(48 + d)
+      tmp = tmp / 10
+    end do
+  end function int4_to_str
 
-  function get_timestamp() result(ts)
+  pure function int2_to_str(val) result(str)
+    integer, intent(in) :: val
+    character(len=2) :: str
+    integer :: tmp, i, d
+    tmp = val
+    do i = 2, 1, -1
+      d = mod(tmp,10)
+      str(i:i) = achar(48 + d)
+      tmp = tmp / 10
+    end do
+  end function int2_to_str
+
+  subroutine get_timestamp(ts)
     implicit none
-    character(len=20) :: ts
+    character(len=20), intent(out) :: ts
     integer :: v(8)
     character(len=4) :: y
     character(len=2) :: mo, da, hh, mm, ss
 
     call date_and_time(values=v)
-    write(y,'(I4.4)') v(1)
-    write(mo,'(I2.2)') v(2)
-    write(da,'(I2.2)') v(3)
-    write(hh,'(I2.2)') v(5)
-    write(mm,'(I2.2)') v(6)
-    write(ss,'(I2.2)') v(7)
+    y = int4_to_str(v(1))
+    mo = int2_to_str(v(2))
+    da = int2_to_str(v(3))
+    hh = int2_to_str(v(5))
+    mm = int2_to_str(v(6))
+    ss = int2_to_str(v(7))
 
     ts = y//'-'//mo//'-'//da//' '//hh//':'//mm//':'//ss
 
-  end function get_timestamp
+  end subroutine get_timestamp
 
 end module meminfo

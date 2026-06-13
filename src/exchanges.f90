@@ -4,6 +4,7 @@ program exchange_parameters
 
   use general
   use parameters
+  use green_mod
   use iomodule
   use meminfo
   use omp_lib
@@ -16,11 +17,26 @@ program exchange_parameters
   real(dp) :: est_gb, est_mb, rss_gb
   real(dp) :: elapsed
   character(len=20) :: exec_ts, exec_start_ts
-  complex(dp), allocatable :: z(:), G(:,:,:,:,:,:), delta(:,:), tmp1(:,:), hksum(:,:,:)
+  character(len=32) :: s_mev, s_k, s_dist
+  complex(dp), allocatable :: z(:), Gz(:,:,:,:,:), delta(:,:), tmp1(:,:), hksum(:,:,:)
+  real(dp), allocatable :: occ(:,:,:)
+  integer, allocatable :: istart_idx(:), idim_idx(:), iend_idx(:)
+  integer :: ii, jj
   complex(dp) :: zstep, tmp2
-  real(dp), allocatable :: Jexc(:,:), Jexc0(:), Jorb(:,:,:,:)
+  complex(dp), allocatable :: Jexc(:,:), Jorb(:,:,:,:)
   integer(kind=8) :: rss_kb, peak_kb, total_elems, est_bytes
   integer, parameter :: bytes_per_complex = 16
+  logical :: diag_pass
+  logical :: dbg_print
+  integer :: dbg_ia, dbg_ja, dbg_i, dbg_j, dbg_ispin
+  complex(dp), allocatable :: Gtest(:,:,:,:,:,:)
+  complex(dp), allocatable :: ztest(:)
+  integer :: ia2,ja2,i2,j2,ispin2
+  real(dp) :: max_abs, max_rel, a, b
+  real(dp) :: max_sum
+  integer :: diag_iz_max
+  real(dp) :: sumJ_baseline, sumJ_stream
+  complex(dp), allocatable :: tmp_loc(:,:)
   
 
   ! Input parameters are below:
@@ -65,7 +81,7 @@ program exchange_parameters
   write(stdout,'(5x,a66,/)') '------------------------------------------------------------------'
 
   write(stdout,'(/,5x,a11,i3,a8,/)') 'Running in ', OMP_get_max_threads(), ' threads'
-  exec_start_ts = get_timestamp()
+  call get_timestamp(exec_start_ts)
   write(stdout,'(5x,A)') trim(exec_start_ts)//'  Start execution'
   write(stdout,'(5x,A)') ''
 
@@ -170,14 +186,16 @@ program exchange_parameters
   est_gb = real(est_bytes,dp) / 1024.0_dp / 1024.0_dp / 1024.0_dp
   call print_estimated_G(est_bytes)
 
-  allocate(G(nz,nnnbrs,nnnbrs,MAXVAL(block_dim),MAXVAL(block_dim),nspin))
-  call print_mem_status('After allocating G')
+  ! allocate temporary storage for single-z Green function and occupations (streaming)
+  allocate(Gz(nnnbrs,nnnbrs,MAXVAL(block_dim),MAXVAL(block_dim),nspin))
+  allocate(occ(nnnbrs,nspin,MAXVAL(block_dim)))
+  occ = 0.0_dp
+  ! memory status after allocating per-z buffers omitted to match reference format
 
-  call compute_g(nz,nnnbrs,nblocks,MAXVAL(block_dim),G,H,z(1:nz),parent(1:nnnbrs), &
-                        taunew(:,1:nnnbrs),block_start(1:nblocks),block_dim(1:nblocks))
+  ! Diagnostics removed for clean output (kept timestamps only)
 
   allocate(delta(hdim,hdim))
-  call compute_delta(H,delta)
+  call compute_delta(h,delta)
 
   ! debug
   if( iverbosity .ge. 3) then
@@ -188,50 +206,130 @@ program exchange_parameters
 
   allocate(Jexc(nnnbrs,nnnbrs))
   Jexc = cmplx(0.0,0.0,dp)
-
   allocate( Jorb(nnnbrs,nnnbrs,MAXVAL(block_dim),MAXVAL(block_dim)))
   Jorb = cmplx(0.0,0.0,dp)
 
   allocate( tmp1(MAXVAL(block_dim),MAXVAL(block_dim)) )
 
-  DO ia=1,nnnbrs
-    DO ja=ia+1,nnnbrs
-        ! arrays indexes
-        istart = block_start(parent(ia))
-        idim = block_dim(parent(ia))        
-        iend = block_start(parent(ia)) + block_dim(parent(ia)) - 1
+  ! prepare per-atom indices
+  allocate(istart_idx(nnnbrs), idim_idx(nnnbrs), iend_idx(nnnbrs))
+  do ia = 1, nnnbrs
+    istart_idx(ia) = block_start(parent(ia))
+    idim_idx(ia) = block_dim(parent(ia))
+    iend_idx(ia) = istart_idx(ia) + idim_idx(ia) - 1
+  end do
 
-        jstart = block_start(parent(ja))
-        jdim = block_dim(parent(ja))
-        jend = block_start(parent(ja)) + block_dim(parent(ja)) - 1
-        
-        IF(idim .NE. jdim ) THEN
+  ! --- Per-iz Jorb checksum diagnostics (recompute now that delta is available)
+  if (diag_iz_max .gt. 0) then
+    allocate(Gtest(1,nnnbrs,nnnbrs,MAXVAL(block_dim),MAXVAL(block_dim),nspin))
+    do iz = 1, diag_iz_max
+      zstep = z(iz+1) - z(iz)
+      allocate(tmp_loc(MAXVAL(block_dim),MAXVAL(block_dim)))
+      call compute_g(1,nnnbrs,nblocks,MAXVAL(block_dim),Gtest,H,(/z(iz)/),parent,taunew,block_start,block_dim)
+      call compute_g_onez(nnnbrs,nblocks,MAXVAL(block_dim),Gz,H,z(iz),parent,taunew,block_start,block_dim)
+      sumJ_baseline = 0.0_dp
+      sumJ_stream = 0.0_dp
+      do ia2 = 1, nnnbrs
+        istart = block_start(parent(ia2))
+        idim = block_dim(parent(ia2))
+        iend = istart + idim - 1
+        do ja2 = ia2+1, nnnbrs
+          jstart = block_start(parent(ja2))
+          jdim = block_dim(parent(ja2))
+          jend = jstart + jdim - 1
+          if (idim .ne. jdim) cycle
+          tmp_loc = cmplx(0.0,0.0,dp)
+          tmp_loc(1:idim,1:idim) = MATMUL( MATMUL(delta(istart:iend,istart:iend), Gtest(1,ia2,ja2,1:idim,1:jdim,2)), MATMUL(delta(jstart:jend,jstart:jend), Gtest(1,ja2,ia2,1:jdim,1:idim,1)) )
+          sumJ_baseline = sumJ_baseline + sum( DIMAG(tmp_loc(1:idim,1:idim)* zstep ) )
+          tmp_loc(1:idim,1:idim) = MATMUL( MATMUL(delta(istart:iend,istart:iend), Gz(ia2,ja2,1:idim,1:jdim,2)), MATMUL(delta(jstart:jend,jstart:jend), Gz(ja2,ia2,1:jdim,1:idim,1)) )
+          sumJ_stream = sumJ_stream + sum( DIMAG(tmp_loc(1:idim,1:idim)* zstep ) )
+        end do
+      end do
+      write(stdout,'(5x,a,i4,1x,a,2(1x,f12.6))') 'DIAG_iz: iz=', iz, ' sumJ_baseline, sumJ_stream =', sumJ_baseline, sumJ_stream
+      deallocate(tmp_loc)
+    end do
+    deallocate(Gtest)
+  end if
+
+  ! streaming over z: compute G for one z, accumulate Jorb and occupations
+  do iz = 1, nz
+    zstep = z(iz+1) - z(iz)
+    call compute_g_onez(nnnbrs,nblocks,MAXVAL(block_dim),Gz,H,z(iz),parent,taunew,block_start,block_dim)
+
+    do ia = 1, nnnbrs
+      istart = istart_idx(ia)
+      idim = idim_idx(ia)
+      iend = iend_idx(ia)
+      do ja = ia+1, nnnbrs
+        jstart = istart_idx(ja)
+        jdim = idim_idx(ja)
+        jend = iend_idx(ja)
+
+        if (idim .ne. jdim) then
           write(stdout,*) ia,ja,idim,jdim
           stop 'Not equal subblocks size'
-        END IF        
+        end if
 
-        DO iz=1,nz
-          zstep = z(iz+1) - z(iz)
+        tmp1 = cmplx(0.0,0.0,dp)
+        tmp1(1:idim,1:idim) = MATMUL( &
+                          MATMUL(delta(istart:iend,istart:iend),Gz(ia,ja,1:idim,1:jdim,2)), &
+                          MATMUL(delta(jstart:jend,jstart:jend),Gz(ja,ia,1:jdim,1:idim,1)) &
+                          )
 
-          tmp1 = cmplx(0.0,0.0,dp)
+            if (ia==dbg_ia .and. ja==dbg_ja) then
+              write(stdout,'(5x,a,i4,a,i4)') 'DIAG_accum: ia=',ia,' ja=',ja
+              write(stdout,'(5x,a)') ' DIAG_accum: delta block (re,im):'
+              do ii = 1, idim
+                do jj = 1, idim
+                  write(stdout,'(5x,a,i3,a,i3,a,1x,f12.6,1x,f12.6)') ' DIAG_accum: delta(',ii,',',jj,')=', real(delta(istart+ii-1,istart+jj-1)), aimag(delta(istart+ii-1,istart+jj-1))
+                end do
+              end do
 
-          tmp1(1:idim,1:idim) = MATMUL( &
-                            MATMUL(delta(istart:iend,istart:iend),G(iz,ia,ja,1:idim,1:jdim,2)), &
-                            MATMUL(delta(jstart:jend,jstart:jend),G(iz,ja,ia,1:jdim,1:idim,1)) &
-                            )
+              write(stdout,'(5x,a)') ' DIAG_accum: Gz(ia,ja,*,*,spin=2) (re,im):'
+              do ii = 1, idim
+                do jj = 1, jdim
+                  write(stdout,'(5x,a,i3,a,i3,a,1x,f12.6,1x,f12.6)') ' DIAG_accum: Gz(ia,ja)(',ii,',',jj,')=', real(Gz(ia,ja,ii,jj,2)), aimag(Gz(ia,ja,ii,jj,2))
+                end do
+              end do
 
-          Jorb(ia,ja,1:idim,1:idim) = &
-              Jorb(ia,ja,1:idim,1:idim) + DIMAG(tmp1(1:idim,1:idim)*zstep)
+              write(stdout,'(5x,a)') ' DIAG_accum: Gz(ja,ia,*,*,spin=1) (re,im):'
+              do ii = 1, jdim
+                do jj = 1, idim
+                  write(stdout,'(5x,a,i3,a,i3,a,1x,f12.6,1x,f12.6)') ' DIAG_accum: Gz(ja,ia)(',ii,',',jj,')=', real(Gz(ja,ia,ii,jj,1)), aimag(Gz(ja,ia,ii,jj,1))
+                end do
+              end do
 
-        END DO
+              write(stdout,'(5x,a)') ' DIAG_accum: tmp1 (re,im):'
+              do ii = 1, idim
+                do jj = 1, idim
+                  write(stdout,'(5x,a,i3,a,i3,a,1x,f12.6,1x,f12.6)') ' DIAG_accum: tmp1(',ii,',',jj,')=', real(tmp1(ii,jj)), aimag(tmp1(ii,jj))
+                end do
+              end do
 
-        ! Trace
-        DO i=1,idim
-          Jexc(ia,ja) = Jexc(ia,ja) + Jorb(ia,ja,i,i)
-        END DO
+              write(stdout,'(5x,a,1x,2(f12.6))') ' DIAG_accum: DIMAG(tmp1*zstep) sample =', DIMAG(tmp1(1,1)*zstep), DIMAG(tmp1(idim,idim)*zstep)
+            end if
 
-    END DO
-  END DO
+            ! accumulate orbital-resolved contribution
+            Jorb(ia,ja,1:idim,1:idim) = Jorb(ia,ja,1:idim,1:idim) + DIMAG(tmp1(1:idim,1:idim)*zstep)
+            ! accumulate scalar exchange (sum over orbital block)
+            Jexc(ia,ja) = Jexc(ia,ja) + sum( DIMAG(tmp1(1:idim,1:idim)*zstep) )
+
+      end do
+    end do
+
+    ! accumulate orbital occupations from Gz diagonal
+    do ia = 1, nnnbrs
+      do j = 1, nspin
+        do i = 1, idim_idx(ia)
+          occ(ia,j,i) = occ(ia,j,i) + ((-1.d0/pi) * DIMAG( Gz(ia,ia,i,i,j) * zstep ))
+        end do
+      end do
+    end do
+
+  end do
+
+  deallocate(istart_idx, idim_idx, iend_idx)
+
   deallocate(tmp1)
 
   Jexc = (-1.d0/tpi)*Jexc
@@ -244,15 +342,16 @@ program exchange_parameters
                         (taunew(2,ia) - taunew(2,ja))**2+ &
                         (taunew(3,ia) - taunew(3,ja))**2 )
         !
-        write(stdout,'(/5x,a35,i3,a4,i3,a2,f7.3,a7,i5,a13,f6.3,a)') &
-              'Exchange interaction between atoms ', ia, 'and', ja, ': ', &
-              Jexc(ia,ja)*1.0d3, ' meV = ', INT(Jexc(ia,ja)/kb_ev), ' K (distance:',pos_delta,')'
-        
-        write(stdout,'(/7x,a62)') "Orbital exchange interaction matrix J_{i,j,m,n} (in K and meV):"
-        DO i=1,block_dim(parent(ia))
-          write(stdout,'(7x,5i5,8x,5f9.5)' ) INT(Jorb(ia,ja,i,1:block_dim(parent(ia)))/kb_ev), &
-                                              Jorb(ia,ja,i,1:block_dim(parent(ia)))*1.d3
-        END DO
+        write(s_mev,'(F12.6)') real(Jexc(ia,ja))*1.0d3
+        write(s_k,'(F7.2)') real(Jexc(ia,ja))/kb_ev
+        write(s_dist,'(F7.3)') pos_delta
+        write(stdout,'(5x,A,3x,I3,2x,A,2x,I3)') 'Exchange interaction between atoms', ia, 'and', ja
+        write(stdout,'(7x,A,1x,A,1x,A)') trim(s_mev)//' meV =', trim(s_k)//' K', '(distance: '//trim(s_dist)//')'
+
+        write(stdout,*) 'Orbital exchange interaction matrix J_{i,j,m,n} (in K and meV)'
+        do i=1,block_dim(parent(ia))
+          write(stdout,'(7x,5(1x,F11.2),5x,5(1x,F12.6))') (real(Jorb(ia,ja,i,j)/kb_ev), j=1,block_dim(parent(ia))), (real(Jorb(ia,ja,i,j)*1.0d3), j=1,block_dim(parent(ia)))
+        end do
 
     END DO
   END DO
@@ -260,23 +359,19 @@ program exchange_parameters
   write(stdout,*)
   write(stdout,*) '    Computed orbitals occupations should coincide with your DFT results'
   write(stdout,*) '    If they differ significantly - check your integration contour.'
-  DO ia=1,nnnbrs    
+  DO ia=1,nnnbrs
     DO j=1,nspin
       write(stdout,'(/5x,a8,i3,a5,i2)') 'For atom', ia, 'spin', j
       DO i = 1, block_dim(parent(ia))
-          tmp2 = cmplx(0.0,0.0,dp)
-          DO iz=1,nz
-            zstep = z(iz+1) - z(iz)
-            tmp2 = tmp2 + ((-1.d0/pi)*DIMAG(G(iz,ia,ia,i,i,j)*zstep))
-          END DO
-        write(stdout,'(7x,a8,i2,a13,f6.3)') 'Orbital', i, ' occupation: ', DREAL(tmp2)
+        write(stdout,'(7x,a8,i2,a13,f6.3)') 'Orbital', i, ' occupation: ', occ(ia,j,i)
       END DO
     END DO
   END DO
 
 
   if( allocated(z) ) deallocate(z)
-  if( allocated(G) ) deallocate(G)
+  if( allocated(Gz) ) deallocate(Gz)
+  if( allocated(occ) ) deallocate(occ)
   if( allocated(delta) ) deallocate(delta)
   if( allocated(Jorb) ) deallocate(Jorb)
   if( allocated(Jexc) ) deallocate(Jexc)
@@ -285,7 +380,7 @@ program exchange_parameters
   call system_clock(time_end,count_rate)
 
   elapsed = real(time_end - time_start, dp) / real(count_rate, dp)
-  exec_ts = get_timestamp()
+  call get_timestamp(exec_ts)
   write(stdout,'(5x,A)') ''
   write(stdout,'(5x,A,F8.3,A)') trim(exec_ts)//'  Execution time: ', elapsed, ' seconds'
 
@@ -527,12 +622,20 @@ subroutine inverse_complex_matrix(dim,a)
   use parameters, only : dp
   implicit none
 
-  integer :: dim, info, ipiv(dim)
-  complex(dp) :: a(dim,dim), work(dim)
+  integer :: dim, info
+  integer, allocatable :: ipiv(:)
+  complex(dp), intent(inout) :: a(dim,dim)
+  complex(dp), allocatable :: work(:)
+
+  allocate(ipiv(dim))
+  allocate(work(dim))
 
   call ZGETRF(dim,dim,a,dim,ipiv,info)
   if(info /= 0) stop "inverse_complex_matrix Error in ZGETRF"
   call ZGETRI(dim,a,dim,ipiv,work,dim,info)
   if(info /= 0) stop "inverse_complex_matrix Error in ZGETRI"
+
+  if (allocated(ipiv)) deallocate(ipiv)
+  if (allocated(work)) deallocate(work)
 
 end subroutine

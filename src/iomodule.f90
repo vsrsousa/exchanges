@@ -41,10 +41,13 @@ module iomodule
     integer, intent(in) :: unit
     character(len=*), intent(in) :: filename
 
-    character(40) :: hashline
+    character(256) :: fname = ''
+    character(40) :: hashline = ''
     integer :: hash
+    character(len=40) :: hashline_trim = ''
 
-    open(unit=unit, file=trim(filename), iostat=ios, status="old", action="read")
+    fname = trim(filename)
+    open(unit=unit, file=fname, iostat=ios, status="old", action="read")
     if ( ios /= 0 ) then
       write(stdout,*) "Error opening file "//filename
       stop 
@@ -52,8 +55,10 @@ module iomodule
 
     !here I want to check the hash
     call find_section(unit,'&hash')
+    hashline = ''
     read(unit,*) hashline
-    read(hashline,*) hash
+    hashline_trim = adjustl(hashline)
+    read(hashline_trim,*) hash
     if (globalhash .eq. 0) then
       globalhash = hash
     else

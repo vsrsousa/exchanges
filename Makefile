@@ -19,8 +19,9 @@ else
 	FFLAGS += -J$(BUILDDIR)
 endif
  LIBS = -qopenmp -lmkl_intel_lp64  -lmkl_sequential -lmkl_core
-#uncomment for debug:
-# FFLAGS = -qopenmp -O0 -g -mavx -traceback -check
+# enable additional runtime checks for debugging (bounds, uninitialized)
+DEBUG_FLAGS = -traceback -check bounds -check uninit
+# To enable debug checks, append $(DEBUG_FLAGS) to FFLAGS when needed.
 
 # gfortran linux
 # FC = gfortran 

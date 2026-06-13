@@ -1,32 +1,51 @@
-SUBROUTINE compute_g(nz,natoms,nblocks,gdim,G,H,z,parent,taunew,block_start,block_dim)
-
+module green_mod
   use parameters, only : dp, tpi
-  use general, only : hdim, nkp, nspin, xk, wk, tau, block_atom
-
+  use general, only : hdim, nkp, nspin, xk, wk, tau, block_atom, efermi
   implicit none
+contains
 
-  INTEGER, INTENT(IN) :: nz, natoms, nblocks, gdim, parent(natoms), block_start(nblocks), block_dim(nblocks)
-  COMPLEX(DP), INTENT(IN) :: H(hdim,hdim,nkp,nspin), z(nz)
-  REAL(DP), INTENT(IN) :: taunew(3,natoms)
-  COMPLEX(DP), INTENT(OUT) :: G(nz,natoms,natoms,gdim,gdim,nspin)
+  SUBROUTINE compute_g_onez(natoms,nblocks,gdim,Gz,H,z,parent,taunew,block_start,block_dim, &
+                            debug_print, dbg_ia, dbg_ja, dbg_i, dbg_j, dbg_ispin)
 
-  INTEGER :: i,j,k, ia, ja, ik, ispin, iz, istart, jstart
-  COMPLEX(DP) :: kphase
-  COMPLEX(DP), ALLOCATABLE :: Gloc(:,:)
+    implicit none
 
-  G = cmplx(0.0,0.0,dp)
+    INTEGER, INTENT(IN) :: natoms, nblocks, gdim, parent(natoms), block_start(nblocks), block_dim(nblocks)
+    COMPLEX(DP), INTENT(IN) :: H(:,:,:,:), z
+    REAL(DP), INTENT(IN) :: taunew(3,natoms)
+    COMPLEX(DP), INTENT(OUT) :: Gz(:,:,:,:,:)  ! assumed-shape for safety
 
-  allocate(Gloc(hdim,hdim))
- 
-  !$OMP PARALLEL PRIVATE(Gloc,kphase,istart,jstart)
-  do ispin = 1, nspin
-    DO ik = 1, nkp
+    INTEGER :: i,j,k, ia, ja, ik, ispin, istart, jstart
+    LOGICAL, INTENT(IN), OPTIONAL :: debug_print
+    INTEGER, INTENT(IN), OPTIONAL :: dbg_ia, dbg_ja, dbg_i, dbg_j, dbg_ispin
+    COMPLEX(DP) :: kphase
+    COMPLEX(DP), ALLOCATABLE :: Gloc(:,:)
 
-      !$OMP DO
-      DO iz = 1, nz
+    Gz = cmplx(0.0,0.0,dp)
 
-        CALL compute_gloc(Gloc,H(:,:,ik,ispin),z(iz))
+    allocate(Gloc(hdim,hdim))
 
+    do ispin = 1, nspin
+      do ik = 1, nkp
+        CALL compute_gloc(Gloc,H(:,:,ik,ispin),z)
+
+        if (present(debug_print) .and. debug_print) then
+          if (present(dbg_ia) .and. present(dbg_ja) .and. present(dbg_i) .and. present(dbg_j) .and. present(dbg_ispin)) then
+            if (dbg_ispin == ispin) then
+              ! compute indices for debug element
+              istart = block_start(parent(dbg_ia))-1
+              jstart = block_start(parent(dbg_ja))-1
+              kphase = cdexp( 1.d0*DCMPLX(0.d0,1.d0)*tpi*&
+                  DOT_PRODUCT( xk(:,ik), &
+                    ((taunew(:,dbg_ia)-tau(:,block_atom(parent(dbg_ia))))-(taunew(:,dbg_ja)-tau(:,block_atom(parent(dbg_ja)))) ) ))
+              write(*,'(a,i6,a,i6,a,i4,a,i4,a,i4)') 'DIAG_onez: ik=',ik,' ia=',dbg_ia,' ja=',dbg_ja,' i=',dbg_i,' j=',dbg_j,' spin=',ispin
+              write(*,'(5x,a,2(1x,2(f12.6)))') ' DIAG_onez: Gloc_re,Gloc_im, kphase_re,kphase_im =', real(Gloc(istart+dbg_i,jstart+dbg_j)), aimag(Gloc(istart+dbg_i,jstart+dbg_j)), real(kphase), aimag(kphase)
+              write(*,'(5x,a,1x,f12.6)') ' DIAG_onez: wk =', wk(ik)
+              write(*,'(5x,a,2(1x,2(f12.6)))') ' DIAG_onez: contrib_re,contrib_im =', real(wk(ik)*Gloc(istart+dbg_i,jstart+dbg_j)*kphase), aimag(wk(ik)*Gloc(istart+dbg_i,jstart+dbg_j)*kphase)
+            end if
+          end if
+        end if
+
+        ! Serial version for debugging (disable OpenMP here)
         DO ia = 1, natoms
           DO ja = 1, natoms
             ! exp(i*k*(Ri-Rj))
@@ -36,10 +55,10 @@ SUBROUTINE compute_g(nz,natoms,nblocks,gdim,G,H,z,parent,taunew,block_start,bloc
 
             istart = block_start(parent(ia))-1
             jstart = block_start(parent(ja))-1
-                          
+
             DO i = 1, block_dim(parent(ia))
               DO j = 1, block_dim(parent(ja))
-                  G(iz,ia,ja,i,j,ispin) = G(iz,ia,ja,i,j,ispin) + wk(ik)*Gloc(istart+i,jstart+j)*kphase
+                Gz(ia,ja,i,j,ispin) = Gz(ia,ja,i,j,ispin) + wk(ik)*Gloc(istart+i,jstart+j)*kphase
               END DO
             END DO
 
@@ -47,38 +66,109 @@ SUBROUTINE compute_g(nz,natoms,nblocks,gdim,G,H,z,parent,taunew,block_start,bloc
         END DO
 
       END DO
-      !$OMP END DO
+    end do
 
-    END DO
-  end do
-  !$OMP END PARALLEL 
+    deallocate(Gloc)
 
-  deallocate(Gloc)
+  END SUBROUTINE compute_g_onez
 
-END SUBROUTINE compute_g
+  SUBROUTINE compute_g(nz,natoms,nblocks,gdim,G,H,z,parent,taunew,block_start,block_dim, &
+                       debug_print, dbg_ia, dbg_ja, dbg_i, dbg_j, dbg_ispin)
 
-subroutine compute_gloc(Gloc,H,z)
-  use parameters, only : dp
-  use general, only: hdim, efermi, nkp
+    implicit none
 
-  implicit none
-  
-  complex(dp), intent(in) :: H(hdim,hdim), z
-  complex(dp), intent(out) :: Gloc(hdim,hdim)
-  
-  complex(dp) ::  tmp(hdim,hdim)
-  integer :: i, j
+    INTEGER, INTENT(IN) :: nz, natoms, nblocks, gdim, parent(natoms), block_start(nblocks), block_dim(nblocks)
+    COMPLEX(DP), INTENT(IN) :: H(:,:,:,:), z(:)
+    REAL(DP), INTENT(IN) :: taunew(3,natoms)
+    COMPLEX(DP), INTENT(OUT) :: G(:,:,:,:,:,:)  ! assumed-shape
 
-  Gloc = cmplx(0.0,0.0,dp)
+    INTEGER :: i,j,k, ia, ja, ik, ispin, iz, istart, jstart
+    LOGICAL, INTENT(IN), OPTIONAL :: debug_print
+    INTEGER, INTENT(IN), OPTIONAL :: dbg_ia, dbg_ja, dbg_i, dbg_j, dbg_ispin
+    COMPLEX(DP) :: kphase
+    COMPLEX(DP), ALLOCATABLE :: Gloc(:,:)
 
-  tmp(:,:) = -1.d0*H(:,:)
+    G = cmplx(0.0,0.0,dp)
 
-  do i=1, hdim
-    tmp(i,i) = z + tmp(i,i) + cmplx(efermi,0.d0)
-  end do 
+    allocate(Gloc(hdim,hdim))
+   
+    !$OMP PARALLEL PRIVATE(Gloc,kphase,istart,jstart)
+    do ispin = 1, nspin
+      DO ik = 1, nkp
 
-  call inverse_complex_matrix(hdim,tmp)
+        !$OMP DO
+        DO iz = 1, nz
+
+          CALL compute_gloc(Gloc,H(:,:,ik,ispin),z(iz))
+
+          if (present(debug_print) .and. debug_print) then
+            if (present(dbg_ia) .and. present(dbg_ja) .and. present(dbg_i) .and. present(dbg_j) .and. present(dbg_ispin)) then
+              if (dbg_ispin == ispin) then
+                istart = block_start(parent(dbg_ia))-1
+                jstart = block_start(parent(dbg_ja))-1
+                kphase = cdexp( 1.d0*DCMPLX(0.d0,1.d0)*tpi*&
+                    DOT_PRODUCT( xk(:,ik), &
+                      ((taunew(:,dbg_ia)-tau(:,block_atom(parent(dbg_ia))))-(taunew(:,dbg_ja)-tau(:,block_atom(parent(dbg_ja)))) ) ))
+                write(*,'(a,i6,a,i6,a,i4,a,i4,a,i4,a,i4)') 'DIAG_g: iz=',iz,' ik=',ik,' ia=',dbg_ia,' ja=',dbg_ja,' i=',dbg_i,' j=',dbg_j,' spin=',ispin
+                write(*,'(5x,a,2(1x,2(f12.6)))') ' DIAG_g: Gloc_re,Gloc_im, kphase_re,kphase_im =', real(Gloc(istart+dbg_i,jstart+dbg_j)), aimag(Gloc(istart+dbg_i,jstart+dbg_j)), real(kphase), aimag(kphase)
+                write(*,'(5x,a,1x,f12.6)') ' DIAG_g: wk =', wk(ik)
+                write(*,'(5x,a,2(1x,2(f12.6)))') ' DIAG_g: contrib_re,contrib_im =', real(wk(ik)*Gloc(istart+dbg_i,jstart+dbg_j)*kphase), aimag(wk(ik)*Gloc(istart+dbg_i,jstart+dbg_j)*kphase)
+              end if
+            end if
+          end if
+
+          DO ia = 1, natoms
+            DO ja = 1, natoms
+              ! exp(i*k*(Ri-Rj))
+              kphase = cdexp( 1.d0*DCMPLX(0.d0,1.d0)*tpi*&
+                  DOT_PRODUCT( xk(:,ik), &
+                    ((taunew(:,ia)-tau(:,block_atom(parent(ia))))-(taunew(:,ja)-tau(:,block_atom(parent(ja)))) ) ))
+
+              istart = block_start(parent(ia))-1
+              jstart = block_start(parent(ja))-1
+                            
+              DO i = 1, block_dim(parent(ia))
+                DO j = 1, block_dim(parent(ja))
+                    G(iz,ia,ja,i,j,ispin) = G(iz,ia,ja,i,j,ispin) + wk(ik)*Gloc(istart+i,jstart+j)*kphase
+                END DO
+              END DO
+
+            END DO
+          END DO
+
+        END DO
+        !$OMP END DO
+
+      END DO
+    end do
+    !$OMP END PARALLEL 
+
+    deallocate(Gloc)
+
+  END SUBROUTINE compute_g
+
+  subroutine compute_gloc(Gloc,H,z)
+    implicit none
+    complex(dp), intent(in) :: H(:,:), z
+    complex(dp), intent(out) :: Gloc(:,:)
+    complex(dp), allocatable ::  tmp(:,:)
+    integer :: i, j
+
+    Gloc = cmplx(0.0,0.0,dp)
+
+    allocate(tmp(hdim,hdim))
+    tmp(:,:) = -1.d0*H(:,:)
+
+    do i=1, hdim
+      tmp(i,i) = z + tmp(i,i) + cmplx(efermi,0.d0)
+    end do 
+
+    call inverse_complex_matrix(hdim,tmp)
     
-  Gloc(:,:) = tmp(:,:)
+    Gloc(:,:) = tmp(:,:)
 
-end subroutine compute_gloc
+    deallocate(tmp)
+
+  end subroutine compute_gloc
+
+end module green_mod
