@@ -54,8 +54,6 @@ contains
 
   end subroutine print_diag_accum
 
-end module diag_mod
-
   subroutine run_diag_iz(diag_iz_max, z, nz, nnnbrs, nblocks, gdim, H, parent, taunew, block_start, block_dim, delta)
     use parameters, only: dp, tpi
     use general, only: nspin
@@ -115,3 +113,5 @@ end module diag_mod
     deallocate(Gz_tmp)
 
   end subroutine run_diag_iz
+
+end module diag_mod
