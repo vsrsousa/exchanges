@@ -1,25 +1,4 @@
 ! Copyright (C) Dmitry Korotin dmitry@korotin.name
-
-program exchange_parameters
-
-  use general
-  use parameters
-  use green_mod
-  use iomodule
-  use hamiltonian_mod
-  use meminfo
-  use mesh_mod
-  use exchange_utils
-  use io_mod
-  use diag_mod
-  use streaming_mod
-  use omp_lib
-
-  implicit none
-
-  integer :: i, j, time_start, time_end, count_rate, nz, ia, ja, idim, jdim, iz, istart, jstart, iend, jend
-  character(len=3) :: fmt='   ' ! is used for pretty output only
-  real(dp) :: pos_delta
   ! Copyright (C) Dmitry Korotin dmitry@korotin.name
 
   program exchange_parameters
