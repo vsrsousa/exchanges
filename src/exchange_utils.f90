@@ -74,4 +74,25 @@ contains
 
   end subroutine accumulate_occupations
 
+  subroutine inverse_complex_matrix(dim,a)
+    use parameters, only : dp
+    implicit none
+    integer :: dim, info
+    integer, allocatable :: ipiv(:)
+    complex(dp), intent(inout) :: a(dim,dim)
+    complex(dp), allocatable :: work(:)
+
+    allocate(ipiv(dim))
+    allocate(work(dim))
+
+    call ZGETRF(dim,dim,a,dim,ipiv,info)
+    if(info /= 0) stop "inverse_complex_matrix Error in ZGETRF"
+    call ZGETRI(dim,a,dim,ipiv,work,dim,info)
+    if(info /= 0) stop "inverse_complex_matrix Error in ZGETRI"
+
+    if (allocated(ipiv)) deallocate(ipiv)
+    if (allocated(work)) deallocate(work)
+
+  end subroutine inverse_complex_matrix
+
 end module exchange_utils

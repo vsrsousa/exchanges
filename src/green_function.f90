@@ -1,5 +1,6 @@
 module green_mod
   use parameters, only : dp, tpi
+  use exchange_utils, only: inverse_complex_matrix
   use general, only : hdim, nkp, nspin, xk, wk, tau, block_atom, efermi
   implicit none
 contains
