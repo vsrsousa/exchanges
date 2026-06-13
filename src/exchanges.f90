@@ -201,11 +201,7 @@ program exchange_parameters
 
   ! prepare per-atom indices
   allocate(istart_idx(nnnbrs), idim_idx(nnnbrs), iend_idx(nnnbrs))
-  do ia = 1, nnnbrs
-    istart_idx(ia) = block_start(parent(ia))
-    idim_idx(ia) = block_dim(parent(ia))
-    iend_idx(ia) = istart_idx(ia) + idim_idx(ia) - 1
-  end do
+  call prepare_indices(nnnbrs, parent, block_start, block_dim, istart_idx, idim_idx, iend_idx)
 
   ! --- Per-iz Jorb checksum diagnostics (recompute now that delta is available)
   if (diag_iz_max .gt. 0) then

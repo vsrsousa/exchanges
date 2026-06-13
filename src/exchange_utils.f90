@@ -74,6 +74,23 @@ contains
 
   end subroutine accumulate_occupations
 
+  subroutine prepare_indices(nnnbrs, parent, block_start, block_dim, istart_idx, idim_idx, iend_idx)
+    implicit none
+    integer, intent(in) :: nnnbrs
+    integer, intent(in) :: parent(:)
+    integer, intent(in) :: block_start(:)
+    integer, intent(in) :: block_dim(:)
+    integer, intent(out) :: istart_idx(:), idim_idx(:), iend_idx(:)
+    integer :: ia
+
+    do ia = 1, nnnbrs
+      istart_idx(ia) = block_start(parent(ia))
+      idim_idx(ia) = block_dim(parent(ia))
+      iend_idx(ia) = istart_idx(ia) + idim_idx(ia) - 1
+    end do
+
+  end subroutine prepare_indices
+
   subroutine inverse_complex_matrix(dim,a)
     use parameters, only : dp
     implicit none
