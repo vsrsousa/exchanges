@@ -19,11 +19,11 @@ contains
     write(s_k,'(F7.2)') real(Jexc_scalar)/kb_ev
     write(s_dist,'(F7.3)') pos_delta
     write(*,'(5x,A,3x,I3,2x,A,2x,I3)') 'Exchange interaction between atoms', ia, 'and', ja
-    write(*,'(7x,A,1x,A,1x,A)') trim(s_mev)//' meV =', trim(s_k)//' K', '(distance: '//trim(s_dist)//')'
+    write(*,'(5x,A,1x,A,1x,A)') trim(s_mev)//' meV =', trim(s_k)//' K', '(distance: '//trim(s_dist)//')'
 
-    write(*,*) 'Orbital exchange interaction matrix J_{i,j,m,n} (in K and meV)'
+    write(*,'(5x,A)') 'Orbital exchange interaction matrix J_{i,j,m,n} (in K and meV)'
     do i = 1, idim
-      write(*,'(7x,5(1x,F11.2),5x,5(1x,F12.6))') (real(Jorb_block(i,j)/kb_ev), j=1,idim), (real(Jorb_block(i,j)*1.0d3), j=1,idim)
+      write(*,'(5x,5(1x,F11.2),5x,5(1x,F12.6))') (real(Jorb_block(i,j)/kb_ev), j=1,idim), (real(Jorb_block(i,j)*1.0d3), j=1,idim)
     end do
 
   end subroutine print_exchange_pair
@@ -42,7 +42,7 @@ contains
         write(*,'(/5x,a8,i3,a5,i2)') 'For atom', ia, 'spin', j
         id = block_dim(parent(ia))
         do i = 1, id
-          write(*,'(7x,a8,i2,a13,f6.3)') 'Orbital', i, ' occupation: ', occ(ia,j,i)
+            write(*,'(5x,a8,i2,a13,f6.3)') 'Orbital', i, ' occupation: ', occ(ia,j,i)
         end do
       end do
     end do
