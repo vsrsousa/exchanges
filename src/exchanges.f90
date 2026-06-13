@@ -34,6 +34,7 @@ program exchange_parameters
   integer, parameter :: bytes_per_complex = 16
   logical :: diag_pass
   logical :: dbg_print
+  logical :: diag_verbose
   integer :: dbg_ia, dbg_ja, dbg_i, dbg_j, dbg_ispin
   complex(dp), allocatable :: Gtest(:,:,:,:,:,:)
   complex(dp), allocatable :: ztest(:)
@@ -72,7 +73,6 @@ program exchange_parameters
   l = 'd'
   atom_of_interest = -100
   diag_iz_max = 0
-  logical :: diag_verbose
   diag_verbose = .false.
 
   call system_clock(time_start,count_rate)
