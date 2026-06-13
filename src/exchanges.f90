@@ -76,22 +76,8 @@ program exchange_parameters
   diag_verbose = .false.
 
   call system_clock(time_start,count_rate)
-
-  write(stdout,'(/,5x,a66)') '------------------------------------------------------------------'
-  write(stdout,'(5x,a66)')   '                      Program EXCHANGES                           '
-  write(stdout,'(5x,a66)')   ' for calculation of exchange parameters of the Heisenberg model.  '
-  write(stdout,'(/,5x,a66)') 'Please cite "D. M. Korotin et al., Phys. Rev. B 91, 224405 (2015)"'
-  write(stdout,'(5x,a66)')   '    in publications or presentations arising from this work.      '
-  write(stdout,'(5x,a66,/)') '------------------------------------------------------------------'
-  write(stdout,'(5x,a66,/)') '   We are using the model with the exchange term defined as:      '
-  write(stdout,'(5x,a66,/)') '                   H = \sum_ij J_{ij} e_i e_j,                    '
-  write(stdout,'(5x,a66,/)') ' where e_i,j are unit vectors and sum runs once over ions pairs   '
-  write(stdout,'(5x,a66,/)') '------------------------------------------------------------------'
-
-  write(stdout,'(/,5x,a11,i3,a8,/)') 'Running in ', OMP_get_max_threads(), ' threads'
   call get_timestamp(exec_start_ts)
-  write(stdout,'(5x,A)') trim(exec_start_ts)//'  Start execution'
-  write(stdout,'(5x,A)') ''
+  call print_program_header(exec_start_ts, OMP_get_max_threads())
 
   read(stdin, exchanges, iostat=ios)
   if( ios .ne. 0 ) stop "Can't read input"
