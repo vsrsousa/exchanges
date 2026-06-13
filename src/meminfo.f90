@@ -117,6 +117,31 @@ contains
 
   end subroutine get_timestamp
 
+  subroutine finalize_exchanges(z, occ, delta, Jorb, Jexc, tmp1, istart_idx, idim_idx, iend_idx)
+    use parameters, only: dp
+    implicit none
+    complex(dp), allocatable, intent(inout) :: z(:)
+    real(dp), allocatable, intent(inout) :: occ(:,:,:)
+    complex(dp), allocatable, intent(inout) :: delta(:,:)
+    complex(dp), allocatable, intent(inout) :: Jorb(:,:,:,:)
+    complex(dp), allocatable, intent(inout) :: Jexc(:,:)
+    complex(dp), allocatable, intent(inout) :: tmp1(:,:)
+    integer, allocatable, intent(inout) :: istart_idx(:), idim_idx(:), iend_idx(:)
+
+    if (allocated(z)) deallocate(z)
+    if (allocated(occ)) deallocate(occ)
+    if (allocated(delta)) deallocate(delta)
+    if (allocated(Jorb)) deallocate(Jorb)
+    if (allocated(Jexc)) deallocate(Jexc)
+    if (allocated(tmp1)) deallocate(tmp1)
+    if (allocated(istart_idx)) deallocate(istart_idx)
+    if (allocated(idim_idx)) deallocate(idim_idx)
+    if (allocated(iend_idx)) deallocate(iend_idx)
+
+    call clear()
+
+  end subroutine finalize_exchanges
+
 end module meminfo
 
 subroutine clear()

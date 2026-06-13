@@ -224,12 +224,7 @@ program exchange_parameters
   call print_occupations(occ,parent,block_dim,nnnbrs,nspin)
 
 
-  if( allocated(z) ) deallocate(z)
-  if( allocated(occ) ) deallocate(occ)
-  if( allocated(delta) ) deallocate(delta)
-  if( allocated(Jorb) ) deallocate(Jorb)
-  if( allocated(Jexc) ) deallocate(Jexc)
-  call clear()
+  call finalize_exchanges(z, occ, delta, Jorb, Jexc, tmp1, istart_idx, idim_idx, iend_idx)
 
   call system_clock(time_end,count_rate)
 
